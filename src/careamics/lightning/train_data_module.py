@@ -249,7 +249,7 @@ class TrainDataModule(L.LightningDataModule):
         self.val_minimum_split = val_minimum_split
 
         # read source function corresponding to the requested type
-        if data_config.data_type == SupportedData.CUSTOM:
+        if data_config.data_type == SupportedData.CUSTOM.value:
             # mypy check
             assert read_source_func is not None
 
@@ -487,7 +487,7 @@ def create_train_datamodule(
 ) -> TrainDataModule:
     """Create a TrainDataModule.
 
-    This function is used to explicitely pass the parameters usually contained in a
+    This function is used to explicitly pass the parameters usually contained in a
     `data_model` configuration to a TrainDataModule.
 
     Since the lightning datamodule has no access to the model, make sure that the
@@ -537,7 +537,7 @@ def create_train_datamodule(
     patch_size : list of int
         Patch size, 2D or 3D patch size.
     axes : str
-        Axes of the data, choosen amongst SCZYX.
+        Axes of the data, chosen amongst SCZYX.
     batch_size : int
         Batch size.
     val_data : pathlib.Path or str or numpy.ndarray, optional

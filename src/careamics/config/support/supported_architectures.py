@@ -4,17 +4,14 @@ from careamics.utils import BaseEnum
 
 
 class SupportedArchitecture(str, BaseEnum):
-    """Supported architectures.
-
-    # TODO add details, in particular where to find the API for the models
-
-    - UNet: classical UNet compatible with N2V2
-    - VAE: variational Autoencoder
-    - Custom: custom model registered with `@register_model` decorator
-    """
+    """Supported architectures."""
 
     UNET = "UNet"
-    VAE = "VAE"
-    CUSTOM = (
-        "Custom"  # TODO all the others tags are small letters, except the architect
-    )
+    """UNet architecture used with N2V, CARE and Noise2Noise."""
+
+    LVAE = "LVAE"
+    """Ladder Variational Autoencoder used for muSplit and denoiSplit."""
+
+    CUSTOM = "custom"
+    """Keyword used for custom architectures provided by users and only compatible
+    with `FCNAlgorithmConfig` configuration."""

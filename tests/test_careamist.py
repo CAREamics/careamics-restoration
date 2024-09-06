@@ -104,8 +104,8 @@ def test_train_single_array_no_val(tmp_path: Path, minimum_configuration: dict):
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -138,8 +138,8 @@ def test_train_array(tmp_path: Path, minimum_configuration: dict):
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -178,8 +178,8 @@ def test_train_array_channel(
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -213,8 +213,8 @@ def test_train_array_3d(tmp_path: Path, minimum_configuration: dict):
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -250,8 +250,8 @@ def test_train_tiff_files_in_memory_no_val(tmp_path: Path, minimum_configuration
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -291,8 +291,8 @@ def test_train_tiff_files_in_memory(tmp_path: Path, minimum_configuration: dict)
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -334,8 +334,8 @@ def test_train_tiff_files(tmp_path: Path, minimum_configuration: dict):
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -375,8 +375,8 @@ def test_train_array_supervised(tmp_path: Path, supervised_configuration: dict):
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -435,8 +435,8 @@ def test_train_tiff_files_in_memory_supervised(
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -496,8 +496,8 @@ def test_train_tiff_files_supervised(tmp_path: Path, supervised_configuration: d
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -540,8 +540,8 @@ def test_predict_on_array_tiled(
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -582,8 +582,8 @@ def test_predict_arrays_no_tiling(
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -723,8 +723,8 @@ def test_predict_path(
 
     # export to BMZ
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=train_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -881,8 +881,8 @@ def test_export_bmz_pretrained_prediction(tmp_path: Path, pre_trained: Path):
 
     # export to BMZ (random array created)
     careamist.export_to_bmz(
-        path=tmp_path / "model.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model.zip",
+        friendly_model_name="TopModel",
         input_array=source_array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",
@@ -902,8 +902,8 @@ def test_export_bmz_pretrained_with_array(tmp_path: Path, pre_trained: Path):
     # alternatively we can pass an array
     array = random_array((32, 32))
     careamist.export_to_bmz(
-        path=tmp_path / "model2.zip",
-        name="TopModel",
+        path_to_archive=tmp_path / "model2.zip",
+        friendly_model_name="TopModel",
         input_array=array,
         authors=[{"name": "Amod", "affiliation": "El"}],
         general_description="A model that just walked in.",

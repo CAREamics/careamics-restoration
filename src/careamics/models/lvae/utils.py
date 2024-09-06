@@ -219,7 +219,7 @@ class StableLogVar:
         self, logvar: torch.Tensor, enable_stable: bool = True, var_eps: float = 1e-6
     ):
         """
-        Contructor.
+        Constructor.
 
         Parameters
         ----------
@@ -295,7 +295,7 @@ class StableMean:
 
 def allow_numpy(func):
     """
-    All optional arguements are passed as is. positional arguments are checked. if they are numpy array,
+    All optional arguments are passed as is. positional arguments are checked. if they are numpy array,
     they are converted to torch Tensor.
     """
 

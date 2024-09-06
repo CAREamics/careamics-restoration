@@ -1,6 +1,6 @@
 """A class chaining transforms together."""
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import numpy as np
 
@@ -8,7 +8,6 @@ from careamics.config.data_model import TRANSFORMS_UNION
 
 from .n2v_manipulate import N2VManipulate
 from .normalize import Normalize
-from .transform import Transform
 from .xy_flip import XYFlip
 from .xy_random_rotate90 import XYRandomRotate90
 
@@ -60,49 +59,33 @@ class Compose:
         all_transforms = get_all_transforms()
 
         # instantiate all transforms
-        transforms = [all_transforms[t.name](**t.model_dump()) for t in transform_list]
+        self.transforms = [
+            all_transforms[t.name](**t.model_dump()) for t in transform_list
+        ]
 
-        self._callable_transforms = self._chain_transforms(transforms)
-
-    def _chain_transforms(self, transforms: List[Transform]) -> Callable:
-        """Chain the transforms together.
+    def _chain_transforms(
+        self, patch: np.ndarray, target: Optional[np.ndarray]
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """Chain transforms on the input data.
 
         Parameters
         ----------
-        transforms : List[Transform]
-            A list of transforms to chain together.
+        patch : np.ndarray
+            Input data.
+        target : Optional[np.ndarray]
+            Target data, by default None.
 
         Returns
         -------
-        Callable
-            A callable that applies the transforms in order to the input data.
+        Tuple[np.ndarray, Optional[np.ndarray]]
+            The output of the transformations.
         """
+        params = (patch, target)
 
-        def _chain(
-            patch: np.ndarray, target: Optional[np.ndarray]
-        ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-            """Chain transforms on the input data.
+        for t in self.transforms:
+            params = t(*params)
 
-            Parameters
-            ----------
-            patch : np.ndarray
-                Input data.
-            target : Optional[np.ndarray]
-                Target data, by default None.
-
-            Returns
-            -------
-            Tuple[np.ndarray, Optional[np.ndarray]]
-                The output of the transformations.
-            """
-            params = (patch, target)
-
-            for t in transforms:
-                params = t(*params)
-
-            return params
-
-        return _chain
+        return params
 
     def __call__(
         self, patch: np.ndarray, target: Optional[np.ndarray] = None
@@ -121,4 +104,4 @@ class Compose:
         Tuple[np.ndarray, ...]
             The output of the transformations.
         """
-        return self._callable_transforms(patch, target)
+        return cast(Tuple[np.ndarray, ...], self._chain_transforms(patch, target))

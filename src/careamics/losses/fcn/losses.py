@@ -53,7 +53,7 @@ def n2v_loss(
     errors = (original_patches - manipulated_patches) ** 2
     # Average over pixels and batch
     loss = torch.sum(errors * masks) / torch.sum(masks)
-    return loss
+    return loss  # TODO change output to dict ?
 
 
 def mae_loss(samples: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:

@@ -5,12 +5,14 @@ from __future__ import annotations
 from pprint import pformat
 from typing import Any, Literal, Optional, Union
 
+import numpy as np
 from numpy.typing import NDArray
 from pydantic import (
     BaseModel,
     ConfigDict,
     Discriminator,
     Field,
+    PlainSerializer,
     field_validator,
     model_validator,
 )
@@ -22,6 +24,30 @@ from .transformations.xy_flip_model import XYFlipModel
 from .transformations.xy_random_rotate90_model import XYRandomRotate90Model
 from .validators import check_axes_validity, patch_size_ge_than_8_power_of_2
 
+
+def np_float_to_scientific_str(x: float) -> str:
+    """Return a string scientific representation of a float.
+
+    In particular, this method is used to serialize floats to strings, allowing
+    numpy.float32 to be passed in the Pydantic model and written to a yaml file as str.
+
+    Parameters
+    ----------
+    x : float
+        Input value.
+
+    Returns
+    -------
+    str
+        Scientific string representation of the input value.
+    """
+    return np.format_float_scientific(x, precision=7)
+
+
+Float = Annotated[float, PlainSerializer(np_float_to_scientific_str, return_type=str)]
+"""Annotated float type, used to serialize floats to strings."""
+
+
 TRANSFORMS_UNION = Annotated[
     Union[
         XYFlipModel,
@@ -30,6 +56,7 @@ TRANSFORMS_UNION = Annotated[
     ],
     Discriminator("name"),  # used to tell the different transform models apart
 ]
+"""Available transforms in CAREamics."""
 
 
 class DataConfig(BaseModel):
@@ -94,20 +121,20 @@ class DataConfig(BaseModel):
     """Batch size for training."""
 
     # Optional fields
-    image_means: Optional[list[float]] = Field(
+    image_means: Optional[list[Float]] = Field(
         default=None, min_length=0, max_length=32
     )
     """Means of the data across channels, used for normalization."""
 
-    image_stds: Optional[list[float]] = Field(default=None, min_length=0, max_length=32)
+    image_stds: Optional[list[Float]] = Field(default=None, min_length=0, max_length=32)
     """Standard deviations of the data across channels, used for normalization."""
 
-    target_means: Optional[list[float]] = Field(
+    target_means: Optional[list[Float]] = Field(
         default=None, min_length=0, max_length=32
     )
     """Means of the target data across channels, used for normalization."""
 
-    target_stds: Optional[list[float]] = Field(
+    target_stds: Optional[list[Float]] = Field(
         default=None, min_length=0, max_length=32
     )
     """Standard deviations of the target data across channels, used for
@@ -265,9 +292,7 @@ class DataConfig(BaseModel):
         elif (self.image_means is not None and self.image_stds is not None) and (
             len(self.image_means) != len(self.image_stds)
         ):
-            raise ValueError(
-                "Mean and std must be specified for each " "input channel."
-            )
+            raise ValueError("Mean and std must be specified for each input channel.")
 
         if (self.target_means and not self.target_stds) or (
             self.target_stds and not self.target_means
@@ -380,7 +405,7 @@ class DataConfig(BaseModel):
 
         Parameters
         ----------
-        image_means : numpy.ndarray ,tuple or list
+        image_means : numpy.ndarray, tuple or list
             Mean values for normalization.
         image_stds : numpy.ndarray, tuple or list
             Standard deviation values for normalization.

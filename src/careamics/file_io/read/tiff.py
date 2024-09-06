@@ -1,4 +1,4 @@
-"""Funtions to read tiff images."""
+"""Functions to read tiff images."""
 
 import logging
 from fnmatch import fnmatch

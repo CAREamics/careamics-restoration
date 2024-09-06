@@ -1,7 +1,8 @@
 """Configuration module."""
 
 __all__ = [
-    "AlgorithmConfig",
+    "FCNAlgorithmConfig",
+    "VAEAlgorithmConfig",
     "DataConfig",
     "Configuration",
     "CheckpointModel",
@@ -15,9 +16,9 @@ __all__ = [
     "register_model",
     "CustomModel",
     "clear_custom_models",
+    "GaussianMixtureNMConfig",
+    "MultiChannelNMConfig",
 ]
-
-from .algorithm_model import AlgorithmConfig
 from .architectures import CustomModel, clear_custom_models, register_model
 from .callback_model import CheckpointModel
 from .configuration_factory import (
@@ -31,5 +32,8 @@ from .configuration_model import (
     save_configuration,
 )
 from .data_model import DataConfig
+from .fcn_algorithm_model import FCNAlgorithmConfig
 from .inference_model import InferenceConfig
+from .nm_model import GaussianMixtureNMConfig, MultiChannelNMConfig
 from .training_model import TrainingConfig
+from .vae_algorithm_model import VAEAlgorithmConfig

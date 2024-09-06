@@ -1,22 +1,7 @@
 import pytest
-from torch import nn, ones
 
 from careamics.config.architectures import CustomModel, get_custom_model, register_model
 from careamics.config.support import SupportedArchitecture
-
-
-@register_model(name="linear")
-class LinearModel(nn.Module):
-    def __init__(self, in_features, out_features):
-        super().__init__()
-
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = nn.Parameter(ones(in_features, out_features))
-        self.bias = nn.Parameter(ones(out_features))
-
-    def forward(self, input):
-        return (input @ self.weight) + self.bias
 
 
 @register_model(name="not_a_model")
@@ -34,12 +19,17 @@ def test_any_custom_parameters():
     Note that those fields are validated by instantiating the
     model.
     """
-    CustomModel(architecture="Custom", name="linear", in_features=10, out_features=5)
+    CustomModel(
+        architecture=SupportedArchitecture.CUSTOM.value,
+        name="linear",
+        in_features=10,
+        out_features=5,
+    )
 
 
-def test_linear_model():
+def test_linear_model(custom_model_name):
     """Test that the model can be retrieved and instantiated."""
-    model = get_custom_model("linear")
+    model = get_custom_model(custom_model_name)
     model(in_features=10, out_features=5)
 
 
@@ -49,24 +39,16 @@ def test_not_a_model():
     model(3)
 
 
-def test_custom_model():
+def test_custom_model(custom_model_parameters):
     """Test that the custom model can be instantiated."""
-    # prepare model dictionary
-    model_dict = {
-        "architecture": SupportedArchitecture.CUSTOM.value,
-        "name": "linear",
-        "in_features": 10,
-        "out_features": 5,
-    }
 
     # create Pydantic model
-    pydantic_model = CustomModel(**model_dict)
+    pydantic_model = CustomModel(**custom_model_parameters)
 
     # instantiate model
     model_class = get_custom_model(pydantic_model.name)
     model = model_class(**pydantic_model.model_dump())
 
-    assert isinstance(model, LinearModel)
     assert model.in_features == 10
     assert model.out_features == 5
 
@@ -76,7 +58,7 @@ def test_custom_model_wrong_class():
     torch.nn.Module subclass."""
     # prepare model dictionary
     model_dict = {
-        "architecture": "Custom",
+        "architecture": SupportedArchitecture.CUSTOM.value,
         "name": "not_a_model",
         "parameters": {"id": 3},
     }
@@ -86,12 +68,12 @@ def test_custom_model_wrong_class():
         CustomModel(**model_dict)
 
 
-def test_wrong_parameters():
+def test_wrong_parameters(custom_model_name):
     """Test that the custom model raises an error if the parameters are not valid."""
     # prepare model dictionary
     model_dict = {
-        "architecture": "Custom",
-        "name": "linear",
+        "architecture": SupportedArchitecture.CUSTOM.value,
+        "name": custom_model_name,
         "parameters": {"in_features": 10},
     }
 

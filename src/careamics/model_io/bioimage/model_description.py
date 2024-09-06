@@ -204,7 +204,7 @@ def create_model_description(
     config : Configuration
         CAREamics configuration.
     name : str
-        Name fo the model.
+        Name of the model.
     general_description : str
         General description of the model.
     authors : List[Author]
@@ -252,7 +252,7 @@ def create_model_description(
 
     # weights description
     architecture_descr = ArchitectureFromLibraryDescr(
-        import_from="careamics.models",
+        import_from="careamics.models.unet",
         callable=f"{config.algorithm_config.model.architecture}",
         kwargs=config.algorithm_config.model.model_dump(),
     )

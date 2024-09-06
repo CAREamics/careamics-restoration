@@ -69,6 +69,7 @@ def test_smoke_n2v_tiled_tiff(tmp_path, minimum_configuration):
 
     # create lightning module
     model = create_careamics_module(
+        algorithm_type=cfg.algorithm_config.algorithm_type,
         algorithm=cfg.algorithm_config.algorithm,
         loss=cfg.algorithm_config.loss,
         architecture=cfg.algorithm_config.model.architecture,
@@ -147,6 +148,7 @@ def test_smoke_n2v_untiled_tiff(tmp_path, minimum_configuration):
 
     # create lightning module
     model = create_careamics_module(
+        algorithm_type=cfg.algorithm_config.algorithm_type,
         algorithm=cfg.algorithm_config.algorithm,
         loss=cfg.algorithm_config.loss,
         architecture=cfg.algorithm_config.model.architecture,

@@ -32,7 +32,7 @@ def test_get_stratified_coords(mask_pixel_perc, shape, num_iterations):
         # Get the coordinates of the pixels to be masked
         coords = _get_stratified_coords(mask_pixel_perc, shape, rng)
 
-        # Check that there is at least one coordinate choosen
+        # Check that there is at least one coordinate chosen
         assert len(coords) > 0
 
         # Check every pair in the array of coordinates

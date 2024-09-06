@@ -22,6 +22,8 @@ class SupportedLoss(str, BaseEnum):
     N2V = "n2v"
     # PN2V = "pn2v"
     # HDN = "hdn"
+    MUSPLIT = "musplit"
+    DENOISPLIT = "denoisplit"
+    DENOISPLIT_MUSPLIT = "denoisplit_musplit"
     # CE = "ce"
     # DICE = "dice"
-    # CUSTOM = "custom" # TODO create mechanism for that

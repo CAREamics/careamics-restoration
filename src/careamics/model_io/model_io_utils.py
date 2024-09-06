@@ -6,12 +6,14 @@ from typing import Tuple, Union
 import torch
 
 from careamics.config import Configuration
-from careamics.lightning.lightning_module import CAREamicsModule
+from careamics.lightning.lightning_module import FCNModule, VAEModule
 from careamics.model_io.bmz_io import load_from_bmz
 from careamics.utils import check_path_exists
 
 
-def load_pretrained(path: Union[Path, str]) -> Tuple[CAREamicsModule, Configuration]:
+def load_pretrained(
+    path: Union[Path, str]
+) -> Tuple[Union[FCNModule, VAEModule], Configuration]:
     """
     Load a pretrained model from a checkpoint or a BioImage Model Zoo model.
 
@@ -44,7 +46,9 @@ def load_pretrained(path: Union[Path, str]) -> Tuple[CAREamicsModule, Configurat
         )
 
 
-def _load_checkpoint(path: Union[Path, str]) -> Tuple[CAREamicsModule, Configuration]:
+def _load_checkpoint(
+    path: Union[Path, str]
+) -> Tuple[Union[FCNModule, VAEModule], Configuration]:
     """
     Load a model from a checkpoint and return both model and configuration.
 
@@ -78,6 +82,14 @@ def _load_checkpoint(path: Union[Path, str]) -> Tuple[CAREamicsModule, Configura
             f"checkpoint: {checkpoint.keys()}"
         ) from e
 
-    model = CAREamicsModule.load_from_checkpoint(path)
+    if cfg_dict["algorithm_config"]["model"]["architecture"] == "UNet":
+        model = FCNModule.load_from_checkpoint(path)
+    elif cfg_dict["algorithm_config"]["model"]["architecture"] == "LVAE":
+        model = VAEModule.load_from_checkpoint(path)
+    else:
+        raise ValueError(
+            "Invalid model architecture: "
+            f"{cfg_dict['algorithm_config']['model']['architecture']}"
+        )
 
     return model, Configuration(**cfg_dict)

@@ -27,6 +27,7 @@ def test_smoke_n2v_2d_array(tmp_path, minimum_configuration):
 
     # create lightning module
     model = create_careamics_module(
+        algorithm_type=cfg.algorithm_config.algorithm_type,
         algorithm=cfg.algorithm_config.algorithm,
         loss=cfg.algorithm_config.loss,
         architecture=cfg.algorithm_config.model.architecture,
@@ -84,6 +85,7 @@ def test_smoke_n2v_2d_tiling(tmp_path, minimum_configuration):
 
     # create lightning module
     model = create_careamics_module(
+        algorithm_type=cfg.algorithm_config.algorithm_type,
         algorithm=cfg.algorithm_config.algorithm,
         loss=cfg.algorithm_config.loss,
         architecture=cfg.algorithm_config.model.architecture,

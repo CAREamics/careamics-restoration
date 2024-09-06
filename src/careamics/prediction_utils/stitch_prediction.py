@@ -76,8 +76,22 @@ def stitch_prediction_single(
     numpy.ndarray
         Full image, with dimensions SC(Z)YX.
     """
-    # retrieve whole array size
-    input_shape = (1, *tile_infos[0].array_shape)  # add S dim
+    # TODO: this is hacky... need a better way to deal with when input channels and
+    #   target channels do not match
+    if len(tile_infos[0].array_shape) == 4:
+        # 4 dimensions => 3 spatial dimensions so -4 is channel dimension
+        tile_channels = tiles[0].shape[-4]
+    elif len(tile_infos[0].array_shape) == 3:
+        # 3 dimensions => 2 spatial dimensions so -3 is channel dimension
+        tile_channels = tiles[0].shape[-3]
+    else:
+        # Note pretty sure this is unreachable because array shape is already
+        #   validated by TileInformation
+        raise ValueError(
+            f"Unsupported number of output dimension {len(tile_infos[0].array_shape)}"
+        )
+    # retrieve whole array size, add S dim and use number of channels in tile
+    input_shape = (1, tile_channels, *tile_infos[0].array_shape[1:])
     predicted_image = np.zeros(input_shape, dtype=np.float32)
 
     for tile, tile_info in zip(tiles, tile_infos):

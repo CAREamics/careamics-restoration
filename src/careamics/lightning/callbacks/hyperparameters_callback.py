@@ -10,7 +10,7 @@ class HyperParametersCallback(Callback):
     """
     Callback allowing saving CAREamics configuration as hyperparameters in the model.
 
-    This allows saving the configuration as dictionnary in the checkpoints, and
+    This allows saving the configuration as dictionary in the checkpoints, and
     loading it subsequently in a CAREamist instance.
 
     Parameters

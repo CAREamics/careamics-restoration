@@ -1,20 +1,26 @@
 import pytest
 import torch
 
-from careamics.config import AlgorithmConfig
-from careamics.lightning import CAREamicsModule, create_careamics_module
+from careamics.config import FCNAlgorithmConfig
+from careamics.lightning.lightning_module import (
+    FCNModule,
+    create_careamics_module,
+)
+
+# TODO: rename to test_FCN_lightining_module.py
 
 
 def test_careamics_module(minimum_algorithm_n2v):
     """Test that the minimum algorithm allows instantiating a the Lightning API
     intermediate layer."""
-    algo_config = AlgorithmConfig(**minimum_algorithm_n2v)
+    algo_config = FCNAlgorithmConfig(**minimum_algorithm_n2v)
 
     # extract model parameters
     model_parameters = algo_config.model.model_dump(exclude_none=True)
 
-    # instantiate CAREamicsModule
+    # instantiate FCNModule
     create_careamics_module(
+        algorithm_type=algo_config.algorithm_type,
         algorithm=algo_config.algorithm,
         loss=algo_config.loss,
         architecture=algo_config.model.architecture,
@@ -26,12 +32,12 @@ def test_careamics_module(minimum_algorithm_n2v):
     )
 
 
-def test_careamics_kiln(minimum_algorithm_n2v):
+def test_careamics_fcn(minimum_algorithm_n2v):
     """Test that the minimum algorithm allows instantiating a CAREamicsKiln."""
-    algo_config = AlgorithmConfig(**minimum_algorithm_n2v)
+    algo_config = FCNAlgorithmConfig(**minimum_algorithm_n2v)
 
     # instantiate CAREamicsKiln
-    CAREamicsModule(algo_config)
+    FCNModule(algo_config)
 
 
 @pytest.mark.parametrize(
@@ -44,6 +50,7 @@ def test_careamics_kiln(minimum_algorithm_n2v):
 )
 def test_careamics_kiln_unet_2D_depth_2_shape(shape):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -54,10 +61,10 @@ def test_careamics_kiln_unet_2D_depth_2_shape(shape):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -79,6 +86,7 @@ def test_careamics_kiln_unet_2D_depth_2_shape(shape):
 )
 def test_careamics_kiln_unet_2D_depth_3_shape(shape):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -89,10 +97,10 @@ def test_careamics_kiln_unet_2D_depth_3_shape(shape):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -112,6 +120,7 @@ def test_careamics_kiln_unet_2D_depth_3_shape(shape):
 )
 def test_careamics_kiln_unet_depth_2_3D(shape):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -122,10 +131,10 @@ def test_careamics_kiln_unet_depth_2_3D(shape):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -145,6 +154,7 @@ def test_careamics_kiln_unet_depth_2_3D(shape):
 )
 def test_careamics_kiln_unet_depth_3_3D(shape):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -155,10 +165,10 @@ def test_careamics_kiln_unet_depth_3_3D(shape):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -178,6 +188,7 @@ def test_careamics_kiln_unet_depth_3_3D(shape):
 )
 def test_careamics_kiln_unet_depth_3_3D_n2v2(shape):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2v",
         "model": {
             "architecture": "UNet",
@@ -189,10 +200,10 @@ def test_careamics_kiln_unet_depth_3_3D_n2v2(shape):
         },
         "loss": "n2v",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -204,6 +215,7 @@ def test_careamics_kiln_unet_depth_3_3D_n2v2(shape):
 @pytest.mark.parametrize("n_channels", [1, 3, 4])
 def test_careamics_kiln_unet_depth_2_channels_2D(n_channels):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -214,10 +226,10 @@ def test_careamics_kiln_unet_depth_2_channels_2D(n_channels):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -232,6 +244,7 @@ def test_careamics_kiln_unet_depth_2_channels_2D(n_channels):
 )
 def test_careamics_kiln_unet_depth_3_channels_2D(n_channels, independent_channels):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -243,10 +256,10 @@ def test_careamics_kiln_unet_depth_3_channels_2D(n_channels, independent_channel
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -258,6 +271,7 @@ def test_careamics_kiln_unet_depth_3_channels_2D(n_channels, independent_channel
 @pytest.mark.parametrize("n_channels", [1, 3, 4])
 def test_careamics_kiln_unet_depth_2_channels_3D(n_channels):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -268,10 +282,10 @@ def test_careamics_kiln_unet_depth_2_channels_3D(n_channels):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass
@@ -283,6 +297,7 @@ def test_careamics_kiln_unet_depth_2_channels_3D(n_channels):
 @pytest.mark.parametrize("n_channels", [1, 3, 4])
 def test_careamics_kiln_unet_depth_3_channels_3D(n_channels):
     algo_dict = {
+        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -293,10 +308,10 @@ def test_careamics_kiln_unet_depth_3_channels_3D(n_channels):
         },
         "loss": "mae",
     }
-    algo_config = AlgorithmConfig(**algo_dict)
+    algo_config = FCNAlgorithmConfig(**algo_dict)
 
     # instantiate CAREamicsKiln
-    model = CAREamicsModule(algo_config)
+    model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
     # test forward pass

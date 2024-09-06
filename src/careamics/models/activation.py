@@ -23,6 +23,8 @@ def get_activation(activation: Union[SupportedActivation, str]) -> Callable:
     """
     if activation == SupportedActivation.RELU:
         return nn.ReLU()
+    elif activation == SupportedActivation.ELU:
+        return nn.ELU()
     elif activation == SupportedActivation.LEAKYRELU:
         return nn.LeakyReLU()
     elif activation == SupportedActivation.TANH:

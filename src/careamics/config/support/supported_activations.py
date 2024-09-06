@@ -24,3 +24,4 @@ class SupportedActivation(str, BaseEnum):
     TANH = "Tanh"
     RELU = "ReLU"
     LEAKYRELU = "LeakyReLU"
+    ELU = "ELU"

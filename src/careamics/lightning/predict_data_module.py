@@ -240,7 +240,7 @@ def create_predict_datamodule(
 ) -> PredictDataModule:
     """Create a CAREamics prediction Lightning datamodule.
 
-    This function is used to explicitely pass the parameters usually contained in an
+    This function is used to explicitly pass the parameters usually contained in an
     `inference_model` configuration.
 
     Since the lightning datamodule has no access to the model, make sure that the
@@ -268,7 +268,7 @@ def create_predict_datamodule(
     data_type : {"array", "tiff", "custom"}
         Data type, see `SupportedData` for available options.
     axes : str
-        Axes of the data, choosen among SCZYX.
+        Axes of the data, chosen among SCZYX.
     image_means : list of float
         Mean values for normalization, only used if Normalization is defined.
     image_stds : list of float

@@ -6,7 +6,7 @@ import os
 
 import ml_collections
 
-from careamics.lvae_training.data_utils import DataType
+from careamics.lvae_training.dataset.data_utils import DataType
 from careamics.models.lvae.utils import LossType
 
 

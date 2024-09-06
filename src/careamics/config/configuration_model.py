@@ -9,11 +9,11 @@ from typing import Literal, Union
 
 import yaml
 from bioimageio.spec.generic.v0_3 import CiteEntry
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
-from .algorithm_model import AlgorithmConfig
 from .data_model import DataConfig
+from .fcn_algorithm_model import FCNAlgorithmConfig
 from .references import (
     CARE,
     CUSTOM,
@@ -39,6 +39,7 @@ from .training_model import TrainingConfig
 from .transformations.n2v_manipulate_model import (
     N2VManipulateModel,
 )
+from .vae_algorithm_model import VAEAlgorithmConfig
 
 
 class Configuration(BaseModel):
@@ -123,6 +124,7 @@ class Configuration(BaseModel):
     >>> config_dict = {
     ...         "experiment_name": "N2V_experiment",
     ...         "algorithm_config": {
+    ...             "algorithm_type": "fcn",
     ...             "algorithm": "n2v",
     ...             "loss": "n2v",
     ...             "model": {
@@ -155,7 +157,9 @@ class Configuration(BaseModel):
     """Name of the experiment, used to name logs and checkpoints."""
 
     # Sub-configurations
-    algorithm_config: AlgorithmConfig
+    algorithm_config: Union[FCNAlgorithmConfig, VAEAlgorithmConfig] = Field(
+        discriminator="algorithm_type"
+    )
     """Algorithm configuration, holding all parameters required to configure the
     model."""
 

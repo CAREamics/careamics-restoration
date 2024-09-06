@@ -44,7 +44,9 @@ class OptimizerModel(BaseModel):
     )
 
     # Mandatory field
-    name: Literal["Adam", "SGD"] = Field(default="Adam", validate_default=True)
+    name: Literal["Adam", "SGD", "Adamax"] = Field(
+        default="Adam", validate_default=True
+    )
     """Name of the optimizer, supported optimizers are defined in SupportedOptimizer."""
 
     # Optional parameters, empty dict default value to allow filtering dictionary

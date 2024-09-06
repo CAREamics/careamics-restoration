@@ -42,12 +42,14 @@ class TrainingConfig(BaseModel):
     loggers are defined in SupportedLogger."""
 
     checkpoint_callback: CheckpointModel = CheckpointModel()
-    """Checkpoint callback configuration."""
+    """Checkpoint callback configuration, following PyTorch Lightning Checkpoint
+    callback."""
 
     early_stopping_callback: Optional[EarlyStoppingModel] = Field(
         default=None, validate_default=True
     )
-    """Early stopping callback configuration."""
+    """Early stopping callback configuration, following PyTorch Lightning Checkpoint
+    callback."""
 
     def __str__(self) -> str:
         """Pretty string reprensenting the configuration.

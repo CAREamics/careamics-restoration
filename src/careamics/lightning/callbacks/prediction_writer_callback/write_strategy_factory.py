@@ -1,4 +1,4 @@
-"""Module containing convienience function to create `WriteStrategy`."""
+"""Module containing convenience function to create `WriteStrategy`."""
 
 from typing import Any, Optional
 

@@ -19,7 +19,7 @@ class SupportedOptimizer(str, BaseEnum):
     # Adagrad = "Adagrad"
     ADAM = "Adam"
     # AdamW = "AdamW"
-    # Adamax = "Adamax"
+    ADAMAX = "Adamax"
     # LBFGS = "LBFGS"
     # NAdam = "NAdam"
     # RAdam = "RAdam"

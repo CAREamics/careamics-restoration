@@ -44,12 +44,12 @@ def test_bmz_io(tmp_path, ordered_array, pre_trained):
     predicted = np.concatenate(predicted_output, axis=0)
 
     # export to BioImage Model Zoo
-    path = tmp_path / "model.zip"
+    path = tmp_path / "other_folder" / "model.zip"
     export_to_bmz(
         model=careamist.model,
         config=careamist.cfg,
-        path=path,
-        name="TopModel",
+        path_to_archive=path,
+        model_name="TopModel",
         general_description="A model that just walked in.",
         authors=[{"name": "Amod", "affiliation": "El"}],
         input_array=train_array[np.newaxis, np.newaxis, ...],

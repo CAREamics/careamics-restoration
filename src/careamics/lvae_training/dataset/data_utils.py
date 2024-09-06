@@ -2,61 +2,14 @@
 Utility functions needed by dataloader & co.
 """
 
+import os
+from dataclasses import dataclass
 from typing import List
 
 import numpy as np
 from skimage.io import imread, imsave
 
-from careamics.models.lvae.utils import Enum
-
-
-class DataType(Enum):
-    MNIST = 0
-    Places365 = 1
-    NotMNIST = 2
-    OptiMEM100_014 = 3
-    CustomSinosoid = 4
-    Prevedel_EMBL = 5
-    AllenCellMito = 6
-    SeparateTiffData = 7
-    CustomSinosoidThreeCurve = 8
-    SemiSupBloodVesselsEMBL = 9
-    Pavia2 = 10
-    Pavia2VanillaSplitting = 11
-    ExpansionMicroscopyMitoTub = 12
-    ShroffMitoEr = 13
-    HTIba1Ki67 = 14
-    BSD68 = 15
-    BioSR_MRC = 16
-    TavernaSox2Golgi = 17
-    Dao3Channel = 18
-    ExpMicroscopyV2 = 19
-    Dao3ChannelWithInput = 20
-    TavernaSox2GolgiV2 = 21
-    TwoDset = 22
-    PredictedTiffData = 23
-    Pavia3SeqData = 24
-    # Here, we have 16 splitting tasks.
-    NicolaData = 25
-
-
-class DataSplitType(Enum):
-    All = 0
-    Train = 1
-    Val = 2
-    Test = 3
-
-
-class GridAlignement(Enum):
-    """
-    A patch is formed by padding the grid with content. If the grids are 'Center' aligned, then padding is to done equally on all 4 sides.
-    On the other hand, if grids are 'LeftTop' aligned, padding is to be done on the right and bottom end of the grid.
-    In the former case, one needs (patch_size - grid_size)//2 amount of content on the right end of the frame.
-    In the latter case, one needs patch_size - grid_size amount of content on the right end of the frame.
-    """
-
-    LeftTop = 0
-    Center = 1
+from careamics.lvae_training.dataset.vae_data_config import DataSplitType, DataType
 
 
 def load_tiff(path):
@@ -113,6 +66,104 @@ def adjust_for_imbalance_in_fraction_value(
             val += test[:imb_count]
             test = test[imb_count:]
     return val, test
+
+
+def get_train_val_data(
+    data_config,
+    fpath,
+    datasplit_type: DataSplitType,
+    val_fraction=None,
+    test_fraction=None,
+    allow_generation=False,  # TODO: what is this
+):
+    """
+    Load the data from the given path and split them in training, validation and test sets.
+
+    Ensure that the shape of data should be N*H*W*C: N is number of data points. H,W are the image dimensions.
+    C is the number of channels.
+    """
+    if data_config.data_type == DataType.SeparateTiffData:
+        fpath1 = os.path.join(fpath, data_config.ch1_fname)
+        fpath2 = os.path.join(fpath, data_config.ch2_fname)
+        fpaths = [fpath1, fpath2]
+        fpath0 = ""
+        if "ch_input_fname" in data_config:
+            fpath0 = os.path.join(fpath, data_config.ch_input_fname)
+            fpaths = [fpath0] + fpaths
+
+        print(
+            f"Loading from {fpath} Channels: "
+            f"{fpath1},{fpath2}, inp:{fpath0} Mode:{DataSplitType.name(datasplit_type)}"
+        )
+
+        data = np.concatenate([load_tiff(fpath)[..., None] for fpath in fpaths], axis=3)
+        if data_config.data_type == DataType.PredictedTiffData:
+            assert len(data.shape) == 5 and data.shape[-1] == 1
+            data = data[..., 0].copy()
+        # data = data[::3].copy()
+        # NOTE: This was not the correct way to do it. It is so because the noise present in the input was directly related
+        # to the noise present in the channels and so this is not the way we would get the data.
+        # We need to add the noise independently to the input and the target.
+
+        # if data_config.get('poisson_noise_factor', False):
+        #     data = np.random.poisson(data)
+        # if data_config.get('enable_gaussian_noise', False):
+        #     synthetic_scale = data_config.get('synthetic_gaussian_scale', 0.1)
+        #     print('Adding Gaussian noise with scale', synthetic_scale)
+        #     noise = np.random.normal(0, synthetic_scale, data.shape)
+        #     data = data + noise
+
+        if datasplit_type == DataSplitType.All:
+            return data.astype(np.float32)
+
+        train_idx, val_idx, test_idx = get_datasplit_tuples(
+            val_fraction, test_fraction, len(data), starting_test=True
+        )
+        if datasplit_type == DataSplitType.Train:
+            return data[train_idx].astype(np.float32)
+        elif datasplit_type == DataSplitType.Val:
+            return data[val_idx].astype(np.float32)
+        elif datasplit_type == DataSplitType.Test:
+            return data[test_idx].astype(np.float32)
+
+    elif data_config.data_type == DataType.BioSR_MRC:
+        num_channels = data_config.num_channels
+        fpaths = []
+        data_list = []
+        for i in range(num_channels):
+            fpath1 = os.path.join(fpath, getattr(data_config, f"ch{i + 1}_fname"))
+            fpaths.append(fpath1)
+            data = get_mrc_data(fpath1)[..., None]
+            data_list.append(data)
+
+        dirname = os.path.dirname(os.path.dirname(fpaths[0])) + "/"
+
+        msg = ",".join([x[len(dirname) :] for x in fpaths])
+        print(
+            f"Loaded from {dirname} Channels:{len(fpaths)} {msg} Mode:{datasplit_type}"
+        )
+        N = data_list[0].shape[0]
+        for data in data_list:
+            N = min(N, data.shape[0])
+
+        cropped_data = []
+        for data in data_list:
+            cropped_data.append(data[:N])
+
+        data = np.concatenate(cropped_data, axis=3)
+
+        if datasplit_type == DataSplitType.All:
+            return data.astype(np.float32)
+
+        train_idx, val_idx, test_idx = get_datasplit_tuples(
+            val_fraction, test_fraction, len(data), starting_test=True
+        )
+        if datasplit_type == DataSplitType.Train:
+            return data[train_idx].astype(np.float32)
+        elif datasplit_type == DataSplitType.Val:
+            return data[val_idx].astype(np.float32)
+        elif datasplit_type == DataSplitType.Test:
+            return data[test_idx].astype(np.float32)
 
 
 def get_datasplit_tuples(
@@ -173,166 +224,199 @@ def get_mrc_data(fpath):
     return data[..., 0]
 
 
+@dataclass
 class GridIndexManager:
+    data_shape: tuple
+    grid_shape: tuple
+    patch_shape: tuple
+    trim_boundary: bool
 
-    def __init__(self, data_shape, grid_size, patch_size, grid_alignement) -> None:
-        self._data_shape = data_shape
-        self._default_grid_size = grid_size
-        self.patch_size = patch_size
-        self.N = self._data_shape[0]
-        self._align = grid_alignement
+    # Vera: patch is centered on index in the grid, grid size not used in training,
+    # used only during val / test, grid size controls the overlap of the patches
+    # in training you only get random patches every time
+    # For borders - just cropped the data, so it perfectly divisible
 
-    def get_data_shape(self):
-        return self._data_shape
+    def __post_init__(self):
+        assert len(self.data_shape) == len(
+            self.grid_shape
+        ), f"Data shape:{self.data_shape} and grid size:{self.grid_shape} must have the same dimension"
+        assert len(self.data_shape) == len(
+            self.patch_shape
+        ), f"Data shape:{self.data_shape} and patch shape:{self.patch_shape} must have the same dimension"
+        innerpad = np.array(self.patch_shape) - np.array(self.grid_shape)
+        for dim, pad in enumerate(innerpad):
+            if pad < 0:
+                raise ValueError(
+                    f"Patch shape:{self.patch_shape} must be greater than or equal to grid shape:{self.grid_shape} in dimension {dim}"
+                )
+            if pad % 2 != 0:
+                raise ValueError(
+                    f"Patch shape:{self.patch_shape} must have even padding in dimension {dim}"
+                )
 
-    def use_default_grid(self, grid_size):
-        return grid_size is None or grid_size < 0
+    def patch_offset(self):
+        return (np.array(self.patch_shape) - np.array(self.grid_shape)) // 2
 
-    def grid_rows(self, grid_size):
-        if self._align == GridAlignement.LeftTop:
-            extra_pixels = self.patch_size - grid_size
-        elif self._align == GridAlignement.Center:
-            # Center is exclusively used during evaluation. In this case, we use the padding to handle edge cases.
-            # So, here, we will ideally like to cover all pixels and so extra_pixels is set to 0.
-            # If there was no padding, then it should be set to (self.patch_size - grid_size) // 2
-            extra_pixels = 0
-
-        return (self._data_shape[-3] - extra_pixels) // grid_size
-
-    def grid_cols(self, grid_size):
-        if self._align == GridAlignement.LeftTop:
-            extra_pixels = self.patch_size - grid_size
-        elif self._align == GridAlignement.Center:
-            extra_pixels = 0
-
-        return (self._data_shape[-2] - extra_pixels) // grid_size
-
-    def grid_count(self, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
-
-        return self.N * self.grid_rows(grid_size) * self.grid_cols(grid_size)
-
-    def hwt_from_idx(self, index, grid_size=None):
-        t = self.get_t(index)
-        return (*self.get_deterministic_hw(index, grid_size=grid_size), t)
-
-    def idx_from_hwt(self, h_start, w_start, t, grid_size=None):
+    def get_individual_dim_grid_count(self, dim: int):
         """
-        Given h,w,t (where h,w constitutes the top left corner of the patch), it returns the corresponding index.
+        Returns the number of the grid in the specified dimension, ignoring all other dimensions.
         """
-        if grid_size is None:
-            grid_size = self._default_grid_size
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
 
-        nth_row = h_start // grid_size
-        nth_col = w_start // grid_size
+        if self.grid_shape[dim] == 1 and self.patch_shape[dim] == 1:
+            return self.data_shape[dim]
+        elif self.trim_boundary is False:
+            return int(np.ceil(self.data_shape[dim] / self.grid_shape[dim]))
+        else:
+            excess_size = self.patch_shape[dim] - self.grid_shape[dim]
+            return int(
+                np.floor((self.data_shape[dim] - excess_size) / self.grid_shape[dim])
+            )
 
-        index = self.grid_cols(grid_size) * nth_row + nth_col
-        return index * self._data_shape[0] + t
+    def total_grid_count(self):
+        """
+        Returns the total number of grids in the dataset.
+        """
+        return self.grid_count(0) * self.get_individual_dim_grid_count(0)
 
-    def get_t(self, index):
-        return index % self.N
+    def grid_count(self, dim: int):
+        """
+        Returns the total number of grids for one value in the specified dimension.
+        """
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
+        if dim == len(self.data_shape) - 1:
+            return 1
 
-    def get_top_nbr_idx(self, index, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
+        return self.get_individual_dim_grid_count(dim + 1) * self.grid_count(dim + 1)
 
-        ncols = self.grid_cols(grid_size)
-        index -= ncols * self.N
-        if index < 0:
-            return None
+    def get_grid_index(self, dim: int, coordinate: int):
+        """
+        Returns the index of the grid in the specified dimension.
+        """
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
+        assert (
+            coordinate < self.data_shape[dim]
+        ), f"Coordinate {coordinate} is out of bounds for data shape {self.data_shape}"
 
+        if self.grid_shape[dim] == 1 and self.patch_shape[dim] == 1:
+            return coordinate
+        elif self.trim_boundary is False:
+            return np.floor(coordinate / self.grid_shape[dim])
+        else:
+            excess_size = (self.patch_shape[dim] - self.grid_shape[dim]) // 2
+            # can be <0 if coordinate is in [0,grid_shape[dim]]
+            return max(0, np.floor((coordinate - excess_size) / self.grid_shape[dim]))
+
+    def dataset_idx_from_grid_idx(self, grid_idx: tuple):
+        """
+        Returns the index of the grid in the dataset.
+        """
+        assert len(grid_idx) == len(
+            self.data_shape
+        ), f"Dimension indices {grid_idx} must have the same dimension as data shape {self.data_shape}"
+        index = 0
+        for dim in range(len(grid_idx)):
+            index += grid_idx[dim] * self.grid_count(dim)
         return index
 
-    def get_bottom_nbr_idx(self, index, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
-
-        ncols = self.grid_cols(grid_size)
-        index += ncols * self.N
-        if index > self.grid_count(grid_size=grid_size):
-            return None
-
-        return index
-
-    def get_left_nbr_idx(self, index, grid_size=None):
-        if self.on_left_boundary(index, grid_size=grid_size):
-            return None
-
-        index -= self.N
-        return index
-
-    def get_right_nbr_idx(self, index, grid_size=None):
-        if self.on_right_boundary(index, grid_size=grid_size):
-            return None
-        index += self.N
-        return index
-
-    def on_left_boundary(self, index, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
-
-        factor = index // self.N
-        ncols = self.grid_cols(grid_size)
-
-        left_boundary = (factor // ncols) != (factor - 1) // ncols
-        return left_boundary
-
-    def on_right_boundary(self, index, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
-
-        factor = index // self.N
-        ncols = self.grid_cols(grid_size)
-
-        right_boundary = (factor // ncols) != (factor + 1) // ncols
-        return right_boundary
-
-    def on_top_boundary(self, index, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
-
-        ncols = self.grid_cols(grid_size)
-        return index < self.N * ncols
-
-    def on_bottom_boundary(self, index, grid_size=None):
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
-
-        ncols = self.grid_cols(grid_size)
-        return index + self.N * ncols > self.grid_count(grid_size=grid_size)
-
-    def on_boundary(self, idx, grid_size=None):
-        if self.on_left_boundary(idx, grid_size=grid_size):
-            return True
-
-        if self.on_right_boundary(idx, grid_size=grid_size):
-            return True
-
-        if self.on_top_boundary(idx, grid_size=grid_size):
-            return True
-
-        if self.on_bottom_boundary(idx, grid_size=grid_size):
-            return True
-        return False
-
-    def get_deterministic_hw(self, index: int, grid_size=None):
+    def get_patch_location_from_dataset_idx(self, dataset_idx: int):
         """
-        Fixed starting position for the crop for the img with index `index`.
+        Returns the patch location of the grid in the dataset.
         """
-        if self.use_default_grid(grid_size):
-            grid_size = self._default_grid_size
+        location = self.get_location_from_dataset_idx(dataset_idx)
+        offset = self.patch_offset()
+        return tuple(np.array(location) - np.array(offset))
 
-        # _, h, w, _ = self._data_shape
-        # assert h == w
-        factor = index // self.N
-        ncols = self.grid_cols(grid_size)
+    def get_dataset_idx_from_grid_location(self, location: tuple):
+        assert len(location) == len(
+            self.data_shape
+        ), f"Location {location} must have the same dimension as data shape {self.data_shape}"
+        grid_idx = [
+            self.get_grid_index(dim, location[dim]) for dim in range(len(location))
+        ]
+        return self.dataset_idx_from_grid_idx(tuple(grid_idx))
 
-        ith_row = factor // ncols
-        jth_col = factor % ncols
-        h_start = ith_row * grid_size
-        w_start = jth_col * grid_size
-        return h_start, w_start
+    def get_gridstart_location_from_dim_index(self, dim: int, dim_index: int):
+        """
+        Returns the grid-start coordinate of the grid in the specified dimension.
+        """
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
+        assert dim_index < self.get_individual_dim_grid_count(
+            dim
+        ), f"Dimension index {dim_index} is out of bounds for data shape {self.data_shape}"
+
+        if self.grid_shape[dim] == 1 and self.patch_shape[dim] == 1:
+            return dim_index
+        elif self.trim_boundary is False:
+            return dim_index * self.grid_shape[dim]
+        else:
+            excess_size = (self.patch_shape[dim] - self.grid_shape[dim]) // 2
+            return dim_index * self.grid_shape[dim] + excess_size
+
+    def get_location_from_dataset_idx(self, dataset_idx: int):
+        grid_idx = []
+        for dim in range(len(self.data_shape)):
+            grid_idx.append(dataset_idx // self.grid_count(dim))
+            dataset_idx = dataset_idx % self.grid_count(dim)
+        location = [
+            self.get_gridstart_location_from_dim_index(dim, grid_idx[dim])
+            for dim in range(len(self.data_shape))
+        ]
+        return tuple(location)
+
+    def on_boundary(self, dataset_idx: int, dim: int):
+        """
+        Returns True if the grid is on the boundary in the specified dimension.
+        """
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
+
+        if dim > 0:
+            dataset_idx = dataset_idx % self.grid_count(dim - 1)
+
+        dim_index = dataset_idx // self.grid_count(dim)
+        return (
+            dim_index == 0 or dim_index == self.get_individual_dim_grid_count(dim) - 1
+        )
+
+    def next_grid_along_dim(self, dataset_idx: int, dim: int):
+        """
+        Returns the index of the grid in the specified dimension in the specified direction.
+        """
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
+        new_idx = dataset_idx + self.grid_count(dim)
+        if new_idx >= self.total_grid_count():
+            return None
+        return new_idx
+
+    def prev_grid_along_dim(self, dataset_idx: int, dim: int):
+        """
+        Returns the index of the grid in the specified dimension in the specified direction.
+        """
+        assert dim < len(
+            self.data_shape
+        ), f"Dimension {dim} is out of bounds for data shape {self.data_shape}"
+        assert dim >= 0, "Dimension must be greater than or equal to 0"
+        new_idx = dataset_idx - self.grid_count(dim)
+        if new_idx < 0:
+            return None
 
 
 class IndexSwitcher:
@@ -372,7 +456,7 @@ class IndexSwitcher:
             self._w_validmax = 0
 
         print(
-            f"[{self.__class__.__name__}] Target Indices: [0,{self._validtarget_ceilT-1}]. Index={self._validtarget_ceilT-1} has shape [:{self._h_validmax},:{self._w_validmax}].  Available data: {self._data_shape[0]}"
+            f"[{self.__class__.__name__}] Target Indices: [0,{self._validtarget_ceilT - 1}]. Index={self._validtarget_ceilT - 1} has shape [:{self._h_validmax},:{self._w_validmax}].  Available data: {self._data_shape[0]}"
         )
 
     def get_valid_target_index(self):
@@ -588,7 +672,6 @@ rec_header_dtd = [
 
 
 def read_mrc(filename, filetype="image"):
-
     fd = open(filename, "rb")
     header = np.fromfile(fd, dtype=rec_header_dtd, count=1)
 

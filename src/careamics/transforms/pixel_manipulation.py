@@ -161,7 +161,7 @@ def _get_stratified_coords(
     coordinate_grid = np.array(coordinate_grid_list).reshape(len(shape), -1).T
 
     grid_random_increment = rng.integers(
-        _odd_jitter_func(float(max(steps)), rng)
+        _odd_jitter_func(float(max(steps)), rng)  # type: ignore
         * np.ones_like(coordinate_grid).astype(np.int32)
         - 1,
         size=coordinate_grid.shape,

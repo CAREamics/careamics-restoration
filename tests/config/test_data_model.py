@@ -1,4 +1,6 @@
+import numpy as np
 import pytest
+import yaml
 
 from careamics.config.data_model import DataConfig
 from careamics.config.support import (
@@ -331,3 +333,23 @@ def test_set_struct_mask_wrong_value(minimum_data: dict):
 
     with pytest.raises(ValueError):
         data.set_structN2V_mask(SupportedStructAxis.VERTICAL.value, 1)
+
+
+def test_export_to_yaml_float32_stats(tmp_path, minimum_data: dict):
+    """Test exporting and loading the pydantic model when the statistics are
+    np.float32."""
+    data = DataConfig(**minimum_data)
+
+    # set np.float32 stats values
+    data.set_means_and_stds([np.float32(1234.5678)], [np.float32(21.73)])
+
+    # export to yaml
+    config_path = tmp_path / "data_config.yaml"
+    with open(config_path, "w") as f:
+        # dump configuration
+        yaml.dump(data.model_dump(), f, default_flow_style=False, sort_keys=False)
+
+    # load model
+    dictionary = yaml.load(config_path.open("r"), Loader=yaml.SafeLoader)
+    read_data = DataConfig(**dictionary)
+    assert read_data.model_dump() == data.model_dump()
