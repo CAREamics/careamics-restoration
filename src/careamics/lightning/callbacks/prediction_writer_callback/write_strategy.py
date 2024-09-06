@@ -19,6 +19,9 @@ from .file_path_utils import create_write_file_path, get_sample_file_path
 class WriteStrategy(Protocol):
     """Protocol for write strategy classes."""
 
+    _write_filenames: Optional[list[Path]]
+    _n_samples_per_file: Optional[list[int]]
+
     def write_batch(
         self,
         trainer: Trainer,
@@ -110,6 +113,9 @@ class CacheTiles:
         self.write_func: WriteFunc = write_func
         self.write_extension: str = write_extension
         self.write_func_kwargs: dict[str, Any] = write_func_kwargs
+
+        self._write_filenames: Optional[list[Path]] = None
+        self._n_samples_per_file: Optional[list[int]] = None
 
         # where tiles will be cached until a whole image has been predicted
         self.tile_cache: list[NDArray] = []
@@ -339,6 +345,9 @@ class WriteImage:
         self.write_func: WriteFunc = write_func
         self.write_extension: str = write_extension
         self.write_func_kwargs: dict[str, Any] = write_func_kwargs
+
+        self._write_filenames: Optional[list[Path]] = None
+        self._n_samples_per_file: Optional[list[int]] = None
 
     def write_batch(
         self,
