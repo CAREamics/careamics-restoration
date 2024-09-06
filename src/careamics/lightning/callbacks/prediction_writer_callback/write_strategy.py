@@ -54,7 +54,7 @@ class WriteStrategy(Protocol):
         """
 
 
-class CacheTiles(WriteStrategy):
+class CacheTiles:
     """
     A write strategy that will cache tiles.
 
@@ -250,7 +250,7 @@ class CacheTiles(WriteStrategy):
         return tiles, tile_infos
 
 
-class WriteTilesZarr(WriteStrategy):
+class WriteTilesZarr:
     """Strategy to write tiles to Zarr file."""
 
     def write_batch(
@@ -293,7 +293,7 @@ class WriteTilesZarr(WriteStrategy):
         raise NotImplementedError
 
 
-class WriteImage(WriteStrategy):
+class WriteImage:
     """
     A strategy for writing image predictions (i.e. un-tiled predictions).
 
