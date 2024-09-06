@@ -109,4 +109,4 @@ def test_file_index_update(tmp_path):
     ds = IterablePredDataset(pred_config, src_files=src_files)
 
     for i, _ in enumerate(ds):
-        assert ds.sample_file_indices[i] == i
+        assert ds.current_file_index == i

@@ -115,9 +115,6 @@ class CacheTiles(WriteStrategy):
         self.tile_cache: list[NDArray] = []
         self.tile_info_cache: list[TileInformation] = []
 
-        # sample count
-        self.sample_count = 0
-
     @property
     def last_tiles(self) -> list[bool]:
         """
@@ -190,9 +187,8 @@ class CacheTiles(WriteStrategy):
             )
 
             # write prediction
-            input_file_path = get_sample_file_path(
-                dataset=dataset, sample_index=self.sample_count
-            )
+            sample_id = tile_infos[0].sample_id  # need this to select correct file name
+            input_file_path = get_sample_file_path(dataset=dataset, sample_id=sample_id)
             file_path = create_write_file_path(
                 dirpath=dirpath,
                 file_path=input_file_path,
@@ -201,8 +197,6 @@ class CacheTiles(WriteStrategy):
             self.write_func(
                 file_path=file_path, img=prediction_image[0], **self.write_func_kwargs
             )
-
-            self.sample_count += 1
 
     def _has_last_tile(self) -> bool:
         """
@@ -345,7 +339,6 @@ class WriteImage(WriteStrategy):
         self.write_func: WriteFunc = write_func
         self.write_extension: str = write_extension
         self.write_func_kwargs: dict[str, Any] = write_func_kwargs
-        self.sample_index = 0
 
     def write_batch(
         self,
@@ -393,10 +386,8 @@ class WriteImage(WriteStrategy):
 
         for i in range(prediction.shape[0]):
             prediction_image = prediction[0]
-            sample_index = batch_idx * dl.batch_size + i
-            input_file_path = get_sample_file_path(
-                dataset=ds, sample_index=sample_index
-            )
+            sample_id = batch_idx * dl.batch_size + i
+            input_file_path = get_sample_file_path(dataset=ds, sample_id=sample_id)
             file_path = create_write_file_path(
                 dirpath=dirpath,
                 file_path=input_file_path,

@@ -35,13 +35,11 @@ def test_get_sample_file_path_tiled(tmp_path, axes):
     )
     ds = IterableTiledPredDataset(pred_config, src_files=src_files)
 
-    sample_count = 0
     for sample in ds:
         sample: tuple[np.ndarray, TileInformation]
         _, tile_info = sample
-        file_path = get_sample_file_path(ds, sample_index=sample_count)
-        file_index = ds.sample_file_indices[sample_count]
-
+        file_path = get_sample_file_path(ds, sample_id=tile_info.sample_id)
+        file_index = ds.current_file_index
         # if samples axis for each sample, the index is added to the filename.
         if "S" in axes:
             save_path = tmp_path / f"{file_index}_{tile_info.sample_id}.tiff"
@@ -49,18 +47,13 @@ def test_get_sample_file_path_tiled(tmp_path, axes):
             save_path = tmp_path / f"{file_index}.tiff"
         assert file_path == save_path
 
-        if tile_info.last_tile:
-            sample_count += 1
-
 
 @pytest.mark.parametrize("axes", ["YX", "SYX"])
 def test_get_sample_file_path_untiled(tmp_path, axes):
     """Test file name generation for untiled prediction dataset."""
-    n_samples = 2
-    n_files = 2
-    input_shape = (n_samples, 16, 16) if "S" in axes else (16, 16)
+    input_shape = (2, 16, 16) if "S" in axes else (16, 16)
     # create files
-    src_files = [tmp_path / f"{i}.tiff" for i in range(n_files)]
+    src_files = [tmp_path / f"{i}.tiff" for i in range(2)]
     for file_path in src_files:
         arr = np.random.rand(*input_shape)
         imwrite(file_path, arr)
@@ -74,11 +67,11 @@ def test_get_sample_file_path_untiled(tmp_path, axes):
     ds = IterablePredDataset(pred_config, src_files=src_files)
 
     for i, _ in enumerate(ds):
-        file_path = get_sample_file_path(ds, sample_index=i)
-        file_index = ds.sample_file_indices[i]
+        file_path = get_sample_file_path(ds, sample_id=i)
+        file_index = ds.current_file_index
         # if samples axis for each sample, the index is added to the filename.
         if "S" in axes:
-            save_path = tmp_path / f"{file_index}_{i - file_index * n_samples}.tiff"
+            save_path = tmp_path / f"{file_index}_{i}.tiff"
         else:
             save_path = tmp_path / f"{file_index}.tiff"
         assert file_path == save_path
@@ -97,7 +90,7 @@ def test_get_sample_file_path_error():
     )
     ds = IterablePredDataset(pred_config, src_files=src_files)
     with pytest.raises(ValueError):
-        get_sample_file_path(ds, sample_index=0)
+        get_sample_file_path(ds, sample_id=0)
 
 
 def test_create_write_file_path():

@@ -128,4 +128,4 @@ def test_file_index_update(tmp_path):
 
     for i, _ in enumerate(ds):
         # floor divide by 9, because there are 9 tiles per sample
-        assert ds.sample_file_indices[i // 9] == i // 9
+        assert ds.current_file_index == i // 9

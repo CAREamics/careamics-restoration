@@ -3,14 +3,12 @@
 from pathlib import Path
 from typing import Union
 
-import numpy as np
-
 from careamics.dataset import IterablePredDataset, IterableTiledPredDataset
 
 
 # TODO: move to datasets package ?
 def get_sample_file_path(
-    dataset: Union[IterableTiledPredDataset, IterablePredDataset], sample_index: int
+    dataset: Union[IterableTiledPredDataset, IterablePredDataset], sample_id: int
 ) -> Path:
     """
     Get the file path for a particular sample.
@@ -19,25 +17,20 @@ def get_sample_file_path(
     ----------
     dataset : IterableTiledPredDataset or IterablePredDataset
         Dataset.
-    sample_index : int
-        The sample index, (in the order samples are iterated over in
-        `IterableTiledPredDataset` or `IterablePredDataset`.
+    sample_id : int
+        Sample ID, the index of the file in the dataset `dataset`.
 
     Returns
     -------
     Path
         The file path corresponding to the sample with the ID `sample_id`.
     """
-    if len(dataset.sample_file_indices) == 0:
-        raise ValueError("No samples found. Dataset has likely not started iterating.")
-    file_index: int = dataset.sample_file_indices[sample_index]
-    file_path: Path = dataset.data_files[file_index]
+    if dataset.current_file_index is None:
+        raise ValueError(
+            "Current file index is `None` because dataset iteration has not commenced."
+        )
+    file_path: Path = dataset.data_files[dataset.current_file_index]
     if "S" in dataset.axes:
-        sample_start = np.where(np.array(dataset.sample_file_indices) == file_index)[0][
-            0
-        ]
-        sample_id = sample_index - sample_start
-
         sample_file_name = f"{file_path.stem}_{sample_id}"
         file_path = (file_path.parent / sample_file_name).with_suffix(file_path.suffix)
 
