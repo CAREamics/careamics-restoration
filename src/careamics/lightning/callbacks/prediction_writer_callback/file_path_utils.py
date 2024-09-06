@@ -25,16 +25,7 @@ def get_sample_file_path(
     Path
         The file path corresponding to the sample with the ID `sample_id`.
     """
-    if dataset.current_file_index is None:
-        raise ValueError(
-            "Current file index is `None` because dataset iteration has not commenced."
-        )
-    file_path: Path = dataset.data_files[dataset.current_file_index]
-    if "S" in dataset.axes:
-        sample_file_name = f"{file_path.stem}_{sample_id}"
-        file_path = (file_path.parent / sample_file_name).with_suffix(file_path.suffix)
-
-    return file_path
+    return dataset.data_files[sample_id]
 
 
 def create_write_file_path(

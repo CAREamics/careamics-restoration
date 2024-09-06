@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, Generator
 
 from numpy.typing import NDArray
 from torch.utils.data import IterableDataset
@@ -85,8 +85,6 @@ class IterableTiledPredDataset(IterableDataset):
         self.tile_size = prediction_config.tile_size
         self.tile_overlap = prediction_config.tile_overlap
         self.read_source_func = read_source_func
-        # if iteration has started, keeps track of file index
-        self.current_file_index: Optional[int] = None
 
         # check mean and std and create normalize transform
         if (
@@ -123,18 +121,11 @@ class IterableTiledPredDataset(IterableDataset):
             self.image_means is not None and self.image_stds is not None
         ), "Mean and std must be provided"
 
-        # reset file index
-        self.current_file_index = None
-
-        for file_index, (sample, _) in enumerate(
-            iterate_over_files(
-                self.prediction_config,
-                self.data_files,
-                read_source_func=self.read_source_func,
-            )
+        for sample, _ in iterate_over_files(
+            self.prediction_config,
+            self.data_files,
+            read_source_func=self.read_source_func,
         ):
-            self.current_file_index = file_index
-
             # generate patches, return a generator of single tiles
             patch_gen = extract_tiles(
                 arr=sample,

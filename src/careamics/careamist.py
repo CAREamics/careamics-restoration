@@ -189,8 +189,7 @@ class CAREamist:
 
         # TODO: move to method
         # prediction writer callback reference
-        # placeholder write strategy — will be changed at predict_to_disk call
-        # TODO: use a placeholder write strategy that will raise an error?
+        # placeholder write strategy — will be changed at runtime
         write_strategy = create_write_strategy("tiff", tiled=False)
         self.prediction_writer = PredictionWriterCallback(
             write_strategy=write_strategy, dirpath=self.work_dir / "predictions"
