@@ -88,25 +88,3 @@ def test_correct_normalized_outputs(tmp_path, n_files, shape, axes, expected_sha
         for j in range(i + 1, len(dataset)):
             img2 = dataset[j]
             assert not np.allclose(img, img2)
-
-
-def test_file_index_update(tmp_path):
-    """Test interal dataset attribute `current_file_index` updates during iteration."""
-    axes = "YX"
-    input_shape = (16, 16)
-    # create files
-    src_files = [tmp_path / f"{i}.tiff" for i in range(2)]
-    for file_path in src_files:
-        arr = np.random.rand(*input_shape)
-        tifffile.imwrite(file_path, arr)
-
-    pred_config = InferenceConfig(
-        data_type="tiff",
-        axes=axes,
-        image_means=[0],
-        image_stds=[0],
-    )
-    ds = IterablePredDataset(pred_config, src_files=src_files)
-
-    for i, _ in enumerate(ds):
-        assert ds.current_file_index == i

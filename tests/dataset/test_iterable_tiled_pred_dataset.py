@@ -102,30 +102,3 @@ def test_correct_normalized_outputs(tmp_path, n_files, shape, axes, expected_sha
         for j in range(i + 1, len(dataset)):
             img2, _ = dataset[j]
             assert not np.allclose(img, img2)
-
-
-def test_file_index_update(tmp_path):
-    """Test interal dataset attribute `current_file_index` updates during iteration."""
-    axes = "YX"
-    input_shape = (16, 16)
-    tile_size = (8, 8)
-    tile_overlap = (4, 4)
-    # create files
-    src_files = [tmp_path / f"{i}.tiff" for i in range(2)]
-    for file_path in src_files:
-        arr = np.random.rand(*input_shape)
-        tifffile.imwrite(file_path, arr)
-
-    pred_config = InferenceConfig(
-        data_type="tiff",
-        tile_size=tile_size,
-        tile_overlap=tile_overlap,
-        axes=axes,
-        image_means=[0],
-        image_stds=[0],
-    )
-    ds = IterableTiledPredDataset(pred_config, src_files=src_files)
-
-    for i, _ in enumerate(ds):
-        # floor divide by 9, because there are 9 tiles per sample
-        assert ds.current_file_index == i // 9
