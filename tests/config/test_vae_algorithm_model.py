@@ -52,7 +52,6 @@ def test_noise_model_denoisplit(tmp_path: Path, create_dummy_noise_model):
         # all other params are default
     )
     config = VAEAlgorithmConfig(
-        algorithm_type="vae",
         algorithm="denoisplit",
         loss="denoisplit",
         model=LVAEModel(architecture="LVAE"),

@@ -20,7 +20,6 @@ def test_careamics_module(minimum_algorithm_n2v):
 
     # instantiate FCNModule
     create_careamics_module(
-        algorithm_type=algo_config.algorithm_type,
         algorithm=algo_config.algorithm,
         loss=algo_config.loss,
         architecture=algo_config.model.architecture,
@@ -48,9 +47,8 @@ def test_careamics_fcn(minimum_algorithm_n2v):
         (32, 32),
     ],
 )
-def test_careamics_kiln_unet_2D_depth_2_shape(shape):
+def test_fcn_module_unet_2D_depth_2_shape(shape):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -84,9 +82,8 @@ def test_careamics_kiln_unet_2D_depth_2_shape(shape):
         (256, 256),
     ],
 )
-def test_careamics_kiln_unet_2D_depth_3_shape(shape):
+def test_fcn_module_unet_2D_depth_3_shape(shape):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -118,9 +115,8 @@ def test_careamics_kiln_unet_2D_depth_3_shape(shape):
         (32, 64, 64),
     ],
 )
-def test_careamics_kiln_unet_depth_2_3D(shape):
+def test_fcn_module_unet_depth_2_3D(shape):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -152,9 +148,8 @@ def test_careamics_kiln_unet_depth_2_3D(shape):
         (32, 128, 128),
     ],
 )
-def test_careamics_kiln_unet_depth_3_3D(shape):
+def test_fcn_module_unet_depth_3_3D(shape):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -186,9 +181,8 @@ def test_careamics_kiln_unet_depth_3_3D(shape):
         (32, 128, 128),
     ],
 )
-def test_careamics_kiln_unet_depth_3_3D_n2v2(shape):
+def test_fcn_module_unet_depth_3_3D_n2v2(shape):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2v",
         "model": {
             "architecture": "UNet",
@@ -213,9 +207,8 @@ def test_careamics_kiln_unet_depth_3_3D_n2v2(shape):
 
 
 @pytest.mark.parametrize("n_channels", [1, 3, 4])
-def test_careamics_kiln_unet_depth_2_channels_2D(n_channels):
+def test_fcn_module_unet_depth_2_channels_2D(n_channels):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -242,9 +235,8 @@ def test_careamics_kiln_unet_depth_2_channels_2D(n_channels):
     "n_channels,independent_channels",
     [(1, False), (1, True), (3, False), (3, True), (4, False), (4, True)],
 )
-def test_careamics_kiln_unet_depth_3_channels_2D(n_channels, independent_channels):
+def test_fcn_module_unet_depth_3_channels_2D(n_channels, independent_channels):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -269,9 +261,8 @@ def test_careamics_kiln_unet_depth_3_channels_2D(n_channels, independent_channel
 
 
 @pytest.mark.parametrize("n_channels", [1, 3, 4])
-def test_careamics_kiln_unet_depth_2_channels_3D(n_channels):
+def test_fcn_module_unet_depth_2_channels_3D(n_channels):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",
@@ -295,9 +286,8 @@ def test_careamics_kiln_unet_depth_2_channels_3D(n_channels):
 
 
 @pytest.mark.parametrize("n_channels", [1, 3, 4])
-def test_careamics_kiln_unet_depth_3_channels_3D(n_channels):
+def test_fcn_module_unet_depth_3_channels_3D(n_channels):
     algo_dict = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "model": {
             "architecture": "UNet",

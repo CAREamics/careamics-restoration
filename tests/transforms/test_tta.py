@@ -69,8 +69,8 @@ def test_same_transforms(shape):
     flip = XYFlip(seed=42)
 
     for _ in range(100):
-        rotated, _ = rot(tensor)
-        flipped, _ = flip(rotated)
+        rotated, *_ = rot(tensor)
+        flipped, *_ = flip(rotated)
 
         # check that is in the augmented list
         assert any(torch.allclose(torch.Tensor(flipped), aug) for aug in augmented)

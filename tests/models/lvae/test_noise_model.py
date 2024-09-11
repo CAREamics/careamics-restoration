@@ -11,6 +11,8 @@ from careamics.models.lvae.noise_models import (
     noise_model_factory,
 )
 
+pytestmark = pytest.mark.lvae
+
 
 def test_factory_no_noise_model():
     noise_model = noise_model_factory(None)

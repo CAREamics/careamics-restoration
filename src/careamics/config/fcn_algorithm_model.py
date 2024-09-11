@@ -24,11 +24,11 @@ class FCNAlgorithmConfig(BaseModel):
 
     Attributes
     ----------
-    algorithm : Literal["n2v", "custom"]
+    algorithm : {"n2v", "care", "n2n", "custom"}
         Algorithm to use.
-    loss : Literal["n2v", "mae", "mse"]
+    loss : {"n2v", "mae", "mse"}
         Loss function to use.
-    model : Union[UNetModel, LVAEModel, CustomModel]
+    model : UNetModel or CustomModel
         Model architecture to use.
     optimizer : OptimizerModel, optional
         Optimizer to use.
@@ -48,7 +48,6 @@ class FCNAlgorithmConfig(BaseModel):
     >>> from careamics.config import FCNAlgorithmConfig
     >>> config_dict = {
     ...     "algorithm": "n2v",
-    ...     "algorithm_type": "fcn",
     ...     "loss": "n2v",
     ...     "model": {
     ...         "architecture": "UNet",
@@ -65,11 +64,6 @@ class FCNAlgorithmConfig(BaseModel):
     )
 
     # Mandatory fields
-    # defined in SupportedAlgorithm
-    algorithm_type: Literal["fcn"]
-    """Algorithm type must be `fcn` (fully convolutional network) to differentiate this
-    configuration from LVAE."""
-
     algorithm: Literal["n2v", "care", "n2n", "custom"]
     """Name of the algorithm, as defined in SupportedAlgorithm. Use `custom` for custom
     model architecture."""
@@ -145,3 +139,14 @@ class FCNAlgorithmConfig(BaseModel):
             Pretty string.
         """
         return pformat(self.model_dump())
+
+    @classmethod
+    def get_compatible_algorithms(cls) -> list[str]:
+        """Get the list of compatible algorithms.
+
+        Returns
+        -------
+        list of str
+            List of compatible algorithms.
+        """
+        return ["n2v", "care", "n2n"]

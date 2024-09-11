@@ -6,10 +6,12 @@ from careamics.dataset.tiling.lvae_tiled_patching import (
     compute_padding,
     compute_tile_grid_shape,
     compute_tile_info,
+    compute_tile_info_legacy,
     extract_tiles,
     n_tiles_1d,
     total_n_tiles,
 )
+from careamics.lvae_training.dataset.data_utils import GridIndexManager
 from careamics.prediction_utils.stitch_prediction import stitch_prediction
 
 
@@ -54,6 +56,67 @@ def test_extract_tiles(data_shape, tile_size, overlaps):
     stitched_arr = stitch_prediction(tiles, tile_infos)[0]
 
     np.testing.assert_array_equal(arr, stitched_arr)
+
+
+def test_compute_tile_info_legacy():
+    """Test the legacy version of `compute_tile_info`."""
+    data_shape = (1, 3, 10, 9)
+    tile_size = (1, 3, 4, 4)
+    overlaps = (0, 0, 2, 2)
+    stitch_shape = tuple(ts - ov for ts, ov in zip(tile_size, overlaps))
+
+    grid_index_manager = GridIndexManager(
+        data_shape=data_shape,
+        grid_shape=stitch_shape,
+        patch_shape=tile_size,
+        trim_boundary=False,
+    )
+
+    # first example
+    tile_info = compute_tile_info_legacy(grid_index_manager=grid_index_manager, index=0)
+    assert tile_info == TileInformation(
+        array_shape=tuple(data_shape[1:]),
+        last_tile=False,
+        overlap_crop_coords=((1, 3), (1, 3)),
+        stitch_coords=((0, 2), (0, 2)),
+        sample_id=0,
+    )
+
+    # second example
+    tile_info = compute_tile_info_legacy(
+        grid_index_manager=grid_index_manager, index=12
+    )
+    assert tile_info == TileInformation(
+        array_shape=tuple(data_shape[1:]),
+        last_tile=False,
+        overlap_crop_coords=((1, 3), (1, 3)),
+        stitch_coords=((4, 6), (4, 6)),
+        sample_id=0,
+    )
+
+    # third example
+    tile_info = tile_info = compute_tile_info_legacy(
+        grid_index_manager=grid_index_manager, index=14
+    )
+    assert tile_info == TileInformation(
+        array_shape=tuple(data_shape[1:]),
+        last_tile=False,
+        overlap_crop_coords=((1, 3), (1, 2)),
+        stitch_coords=((4, 6), (8, 9)),
+        sample_id=0,
+    )
+
+    # fourth example
+    tile_info = tile_info = compute_tile_info_legacy(
+        grid_index_manager=grid_index_manager, index=24
+    )
+    assert tile_info == TileInformation(
+        array_shape=tuple(data_shape[1:]),
+        last_tile=True,
+        overlap_crop_coords=((1, 3), (1, 2)),
+        stitch_coords=((8, 10), (8, 9)),
+        sample_id=0,
+    )
 
 
 def test_compute_tile_info():

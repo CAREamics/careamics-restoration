@@ -18,7 +18,6 @@ from .training_model import TrainingConfig
 
 # TODO rename ?
 def _create_supervised_configuration(
-    algorithm_type: Literal["fcn"],
     algorithm: Literal["care", "n2n"],
     experiment_name: str,
     data_type: Literal["array", "tiff", "custom"],
@@ -39,8 +38,6 @@ def _create_supervised_configuration(
 
     Parameters
     ----------
-    algorithm_type : Literal["fcn"]
-        Type of the algorithm.
     algorithm : Literal["care", "n2n"]
         Algorithm to use.
     experiment_name : str
@@ -102,7 +99,6 @@ def _create_supervised_configuration(
 
     # algorithm model
     algorithm = FCNAlgorithmConfig(
-        algorithm_type=algorithm_type,
         algorithm=algorithm,
         loss=loss,
         model=unet_model,
@@ -220,7 +216,6 @@ def create_care_configuration(
         n_channels_out = n_channels_in
 
     return _create_supervised_configuration(
-        algorithm_type="fcn",
         algorithm="care",
         experiment_name=experiment_name,
         data_type=data_type,
@@ -310,7 +305,6 @@ def create_n2n_configuration(
         n_channels_out = n_channels_in
 
     return _create_supervised_configuration(
-        algorithm_type="fcn",
         algorithm="n2n",
         experiment_name=experiment_name,
         data_type=data_type,
@@ -522,7 +516,6 @@ def create_n2v_configuration(
 
     # algorithm model
     algorithm = FCNAlgorithmConfig(
-        algorithm_type="fcn",
         algorithm=SupportedAlgorithm.N2V.value,
         loss=SupportedLoss.N2V.value,
         model=unet_model,

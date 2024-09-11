@@ -56,7 +56,7 @@ def test_normalize_denormalize(channels):
     )
 
     # Apply the transform, removing the sample dimension
-    normalized, _ = norm(patch=array[0])
+    normalized, *_ = norm(patch=array[0])
     assert np.abs(normalized.mean()) < 0.02
     assert np.abs(normalized.std() - 1) < 0.2
 
@@ -69,3 +69,24 @@ def test_normalize_denormalize(channels):
     # Apply the denormalize transform
     denormalized = denorm(patch=normalized[np.newaxis, ...])  # need to add batch dim
     assert np.isclose(denormalized, array, atol=1e-6).all()
+
+
+# long name sorry
+def test_transform_additional_arrays_not_implemented(ordered_array):
+    """Test normalize raises not implemented if additional arrays are used"""
+    # create inputs
+    shape = (2, 2, 5, 5)
+    array = ordered_array(shape)
+    additional_arrays = {"arr": ordered_array(shape)}
+
+    # Compute mean and std
+    means, stds = compute_normalization_stats(image=array)
+
+    # Create the transform
+    norm = Normalize(
+        image_means=means,
+        image_stds=stds,
+    )
+
+    with pytest.raises(NotImplementedError):
+        norm(array, **additional_arrays)

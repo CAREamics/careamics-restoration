@@ -90,8 +90,11 @@ class Normalize(Transform):
         self.eps = 1e-6
 
     def __call__(
-        self, patch: np.ndarray, target: Optional[NDArray] = None
-    ) -> tuple[NDArray, Optional[NDArray]]:
+        self,
+        patch: np.ndarray,
+        target: Optional[NDArray] = None,
+        **additional_arrays: NDArray,
+    ) -> tuple[NDArray, Optional[NDArray], dict[str, NDArray]]:
         """Apply the transform to the source patch and the target (optional).
 
         Parameters
@@ -100,6 +103,9 @@ class Normalize(Transform):
             Patch, 2D or 3D, shape C(Z)YX.
         target : NDArray, optional
             Target for the patch, by default None.
+        **additional_arrays : NDArray
+            Additional arrays that will be transformed identically to `patch` and
+            `target`.
 
         Returns
         -------
@@ -110,6 +116,11 @@ class Normalize(Transform):
             raise ValueError(
                 f"Number of means (got a list of size {len(self.image_means)}) and "
                 f"number of channels (got shape {patch.shape} for C(Z)YX) do not match."
+            )
+        if len(additional_arrays) != 0:
+            raise NotImplementedError(
+                "Transforming additional arrays is currently not supported for "
+                "`Normalize`."
             )
 
         # reshape mean and std and apply the normalization to the patch
@@ -129,7 +140,7 @@ class Normalize(Transform):
         else:
             norm_target = None
 
-        return norm_patch, norm_target
+        return norm_patch, norm_target, additional_arrays
 
     def _apply(self, patch: NDArray, mean: NDArray, std: NDArray) -> NDArray:
         """

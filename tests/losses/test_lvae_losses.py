@@ -37,6 +37,8 @@ if TYPE_CHECKING:
 #     )
 #     Likelihood = Union[LikelihoodModule, GaussianLikelihood, NoiseModelLikelihood]
 
+pytestmark = pytest.mark.lvae
+
 
 # TODO: move to conftest.py as pytest.fixture
 def create_dummy_noise_model(

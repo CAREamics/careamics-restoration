@@ -47,8 +47,8 @@ def test_compose_with_target(ordered_array):
     source_transformed, target_transformed = compose(source, target)
 
     # apply them manually
-    t1_source, t1_target = transform_list[0](source, target)
-    t2_source, t2_target = transform_list[1](t1_source, t1_target)
+    t1_source, t1_target, _ = transform_list[0](source, target)
+    t2_source, t2_target, _ = transform_list[1](t1_source, t1_target)
 
     # check the results
     assert (source_transformed == t2_source).all()
@@ -72,9 +72,12 @@ def test_compose_n2v(ordered_array):
     # apply the transforms
     normalize = Normalize(image_means=means, image_stds=stds)
     xyflip = XYFlip(seed=seed)
-
     xyrotate = XYRandomRotate90(seed=seed)
-    array_aug, _ = xyrotate(*xyflip(*normalize(array[0])))
+    array_aug, *_ = xyrotate(
+        *xyflip(*normalize(array[0])[:2])[  # ignore additional_arrays (element no. 3)
+            :2
+        ]  # ignore additional_arrays (element no. 3)
+    )
 
     # instantiate Compose
     compose = Compose(transform_list_pydantic)
@@ -136,3 +139,25 @@ def test_random_composition(ordered_array, shape):
         result_array, result_mask = compose(array, mask)
         assert not np.array_equal(result_array, array)
         assert not np.array_equal(result_mask, mask)
+
+
+def test_compose_additional_arrays(ordered_array):
+    """Test additional arrays get tranformed in the same way as the patch."""
+    seed = 24
+    # create inputs
+    shape = (2, 2, 5, 5)
+    array = ordered_array(shape)
+    additional_arrays = {"arr": ordered_array(shape)}
+
+    # create tranforms
+    transforms = [
+        XYFlipModel(name="XYFlip", seed=seed),
+        XYRandomRotate90Model(name="XYRandomRotate90", seed=seed),
+    ]
+
+    compose = Compose(transforms)
+
+    augmented, _, additional_augmented = compose.transform_with_additional_arrays(
+        array, **additional_arrays
+    )
+    assert np.array_equal(augmented, additional_augmented["arr"])

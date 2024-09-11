@@ -75,7 +75,6 @@ def minimum_algorithm_n2v() -> dict:
     """
     # create dictionary
     algorithm = {
-        "algorithm_type": "fcn",
         "algorithm": "n2v",
         "loss": "n2v",
         "model": {
@@ -97,7 +96,6 @@ def minimum_algorithm_supervised() -> dict:
     """
     # create dictionary
     algorithm = {
-        "algorithm_type": "fcn",
         "algorithm": "n2n",
         "loss": "mae",
         "model": {
@@ -120,7 +118,6 @@ def minimum_algorithm_musplit() -> dict:
     """
     # create dictionary
     algorithm = {
-        "algorithm_type": "vae",
         "algorithm": "musplit",  # TODO temporary
         "loss": "musplit",
         "model": {
@@ -149,7 +146,6 @@ def minimum_algorithm_denoisplit() -> dict:
     """
     # create dictionary
     algorithm = {
-        "algorithm_type": "vae",
         "algorithm": "denoisplit",
         "loss": "denoisplit",
         "model": {

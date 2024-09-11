@@ -3,6 +3,8 @@ import pytest
 from careamics.config.architectures import LVAEModel
 from careamics.config.support import SupportedActivation
 
+pytestmark = pytest.mark.lvae
+
 
 def test_instantiation():
     """Test that LVAEModel can be instantiated."""

@@ -215,6 +215,13 @@ class CAREamist:
         # instantiate trainer
         self.trainer = Trainer(
             max_epochs=self.cfg.training_config.num_epochs,
+            precision=self.cfg.training_config.precision,
+            max_steps=self.cfg.training_config.max_steps,
+            check_val_every_n_epoch=self.cfg.training_config.check_val_every_n_epoch,
+            enable_progress_bar=self.cfg.training_config.enable_progress_bar,
+            accumulate_grad_batches=self.cfg.training_config.accumulate_grad_batches,
+            gradient_clip_val=self.cfg.training_config.gradient_clip_val,
+            gradient_clip_algorithm=self.cfg.training_config.gradient_clip_algorithm,
             callbacks=self.callbacks,
             default_root_dir=self.work_dir,
             logger=self.experiment_logger,

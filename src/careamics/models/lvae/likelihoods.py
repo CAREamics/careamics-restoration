@@ -7,6 +7,7 @@ from __future__ import annotations
 import math
 from typing import Literal, Union, TYPE_CHECKING, Any, Optional
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -287,30 +288,37 @@ class NoiseModelLikelihood(LikelihoodModule):
 
     def __init__(
         self,
-        data_mean: torch.Tensor,
-        data_std: torch.Tensor,
-        noiseModel: NoiseModel,  # TODO: check the type -> couldn't manage due to circular imports...
+        data_mean: Union[np.ndarray, torch.Tensor],
+        data_std: Union[np.ndarray, torch.Tensor],
+        noiseModel: NoiseModel,
     ):
         """Constructor.
 
         Parameters
         ----------
-        data_mean: torch.Tensor
+        data_mean: Union[np.ndarray, torch.Tensor]
             The mean of the data, used to unnormalize data for noise model evaluation.
-        data_std: torch.Tensor
+        data_std: Union[np.ndarray, torch.Tensor]
             The standard deviation of the data, used to unnormalize data for noise
             model evaluation.
         noiseModel: NoiseModel
             The noise model instance used to compute the likelihood.
         """
         super().__init__()
-        self.data_mean = data_mean
-        self.data_std = data_std
+        self.data_mean = torch.Tensor(data_mean)
+        self.data_std = torch.Tensor(data_std)
         self.noiseModel = noiseModel
 
-    def set_params_to_same_device_as(
+    def _set_params_to_same_device_as(
         self, correct_device_tensor: torch.Tensor
-    ) -> None:  # TODO: needed?
+    ) -> None:
+        """Set the parameters to the same device as the input tensor.
+
+        Parameters
+        ----------
+        correct_device_tensor: torch.Tensor
+            The tensor whose device is used to set the parameters.
+        """
         if self.data_mean.device != correct_device_tensor.device:
             self.data_mean = self.data_mean.to(correct_device_tensor.device)
             self.data_std = self.data_std.to(correct_device_tensor.device)
@@ -355,6 +363,7 @@ class NoiseModelLikelihood(LikelihoodModule):
         torch.Tensor
             The log-likelihood tensor. Shape is (B, C, [Z], Y, X).
         """
+        self._set_params_to_same_device_as(x)
         predicted_s_denormalized = params["mean"] * self.data_std + self.data_mean
         x_denormalized = x * self.data_std + self.data_mean
         likelihoods = self.noiseModel.likelihood(

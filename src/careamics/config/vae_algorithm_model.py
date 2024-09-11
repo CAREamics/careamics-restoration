@@ -19,40 +19,7 @@ from .optimizer_models import LrSchedulerModel, OptimizerModel
 class VAEAlgorithmConfig(BaseModel):
     """Algorithm configuration.
 
-    This Pydantic model validates the parameters governing the components of the
-    training algorithm: which algorithm, loss function, model architecture, optimizer,
-    and learning rate scheduler to use.
-
-    Currently, we only support N2V, CARE, N2N and custom models. The `n2v` algorithm is
-    only compatible with `n2v` loss and `UNet` architecture. The `custom` algorithm
-    allows you to register your own architecture and select it using its name as
-    `name` in the custom pydantic model.
-
-    Attributes
-    ----------
-    algorithm : algorithm: Literal["musplit", "denoisplit", "custom"]
-        Algorithm to use.
-    loss : Literal["musplit", "denoisplit", "denoisplit_musplit"]
-        Loss function to use.
-    model : Union[LVAEModel, CustomModel]
-        Model architecture to use.
-    noise_model: Optional[MultiChannelNmModel]
-        Noise model to use.
-    noise_model_likelihood_model: Optional[NMLikelihoodModel]
-        Noise model likelihood model to use.
-    gaussian_likelihood_model: Optional[GaussianLikelihoodModel]
-        Gaussian likelihood model to use.
-    optimizer : OptimizerModel, optional
-        Optimizer to use.
-    lr_scheduler : LrSchedulerModel, optional
-        Learning rate scheduler to use.
-
-    Raises
-    ------
-    ValueError
-        Algorithm parameter type validation errors.
-    ValueError
-        If the algorithm, loss and model are not compatible.
+    # TODO
 
     Examples
     --------
@@ -70,8 +37,7 @@ class VAEAlgorithmConfig(BaseModel):
     # defined in SupportedAlgorithm
     # TODO: Use supported Enum classes for typing?
     #   - values can still be passed as strings and they will be cast to Enum
-    algorithm_type: Literal["vae"]
-    algorithm: Literal["musplit", "denoisplit", "custom"]
+    algorithm: Literal["musplit", "denoisplit"]
     loss: Literal["musplit", "denoisplit", "denoisplit_musplit"]
     model: Union[LVAEModel, CustomModel] = Field(discriminator="architecture")
 

@@ -150,7 +150,7 @@ def test_extracting_val_files(tmp_path, ordered_array, percentage):
 def test_compute_mean_std_transform_welford(tmp_path, shape, axes, patch_size):
     """Test that mean and std are computed and correctly added to the configuration
     and transform."""
-    n_files = 100
+    n_files = 10
     files = []
     array = np.random.randint(0, np.iinfo(np.uint16).max, (n_files, *shape))
 
@@ -194,7 +194,7 @@ def test_compute_mean_std_transform_welford_with_targets(
 ):
     """Test that mean and std are computed and correctly added to the configuration
     and transform."""
-    n_files = 100
+    n_files = 10
     files = []
     target_files = []
     array = np.random.randint(0, np.iinfo(np.uint16).max, (n_files, *shape))

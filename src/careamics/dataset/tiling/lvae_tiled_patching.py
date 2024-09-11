@@ -8,6 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from careamics.config.tile_information import TileInformation
+from careamics.lvae_training.dataset.data_utils import GridIndexManager
 
 
 def extract_tiles(
@@ -66,10 +67,12 @@ def extract_tiles(
         # itertools.product is equivalent of nested loops
 
         stitch_size = tile_size - overlaps
-        for tile_grid_coords in itertools.product(*[range(n) for n in tile_grid_shape]):
+        for tile_grid_indices in itertools.product(
+            *[range(n) for n in tile_grid_shape]
+        ):
 
             # calculate crop coordinates
-            crop_coords_start = np.array(tile_grid_coords) * stitch_size
+            crop_coords_start = np.array(tile_grid_indices) * stitch_size
             crop_slices: tuple[Union[builtins.ellipsis, slice], ...] = (
                 ...,
                 *[
@@ -80,7 +83,7 @@ def extract_tiles(
             tile = sample[crop_slices]
 
             tile_info = compute_tile_info(
-                np.array(tile_grid_coords),
+                np.array(tile_grid_indices),
                 np.array(data_shape),
                 np.array(tile_size),
                 np.array(overlaps),
@@ -93,19 +96,98 @@ def extract_tiles(
             yield tile, tile_info
 
 
+def compute_tile_info_legacy(
+    grid_index_manager: GridIndexManager, index: int
+) -> TileInformation:
+    """
+    Compute the tile information for a tile at a given dataset index.
+
+    Parameters
+    ----------
+    grid_index_manager : GridIndexManager
+        The grid index manager that keeps track of tile locations.
+    index : int
+        The dataset index.
+
+    Returns
+    -------
+    TileInformation
+        Information that describes how to crop and stitch a tile to create a full image.
+
+    Raises
+    ------
+    ValueError
+        If `grid_index_manager.data_shape` does not have 4 or 5 dimensions.
+    """
+    data_shape = np.array(grid_index_manager.data_shape)
+    if len(data_shape) == 5:
+        n_spatial_dims = 3
+    elif len(data_shape) == 4:
+        n_spatial_dims = 2
+    else:
+        raise ValueError("Data shape must have 4 or 5 dimensions, equating to SC(Z)YX.")
+
+    stitch_coords_start = np.array(
+        grid_index_manager.get_location_from_dataset_idx(index)
+    )
+    stitch_coords_end = stitch_coords_start + np.array(grid_index_manager.grid_shape)
+
+    tile_coords_start = stitch_coords_start - grid_index_manager.patch_offset()
+
+    # --- replace out of bounds indices
+    out_of_lower_bound = stitch_coords_start < 0
+    out_of_upper_bound = stitch_coords_end > data_shape
+    stitch_coords_start[out_of_lower_bound] = 0
+    stitch_coords_end[out_of_upper_bound] = data_shape[out_of_upper_bound]
+
+    # TODO: TilingMode not in current version
+    # if grid_index_manager.tiling_mode == TilingMode.ShiftBoundary:
+    #     for dim in range(len(stitch_coords_start)):
+    #         if tile_coords_start[dim] == 0:
+    #             stitch_coords_start[dim] = 0
+    #         if tile_coords_end[dim] == grid_index_manager.data_shape[dim]:
+    #             tile_coords_end [dim]= grid_index_manager.data_shape[dim]
+
+    # --- calculate overlap crop coords
+    overlap_crop_coords_start = stitch_coords_start - tile_coords_start
+    overlap_crop_coords_end = overlap_crop_coords_start + (
+        stitch_coords_end - stitch_coords_start
+    )
+
+    last_tile = index == grid_index_manager.total_grid_count() - 1
+
+    # --- combine start and end
+    stitch_coords = tuple(
+        (start, end) for start, end in zip(stitch_coords_start, stitch_coords_end)
+    )
+    overlap_crop_coords = tuple(
+        (start, end)
+        for start, end in zip(overlap_crop_coords_start, overlap_crop_coords_end)
+    )
+
+    tile_info = TileInformation(
+        array_shape=data_shape[1:],  # remove S dim
+        last_tile=last_tile,
+        overlap_crop_coords=overlap_crop_coords[-n_spatial_dims:],
+        stitch_coords=stitch_coords[-n_spatial_dims:],
+        sample_id=0,
+    )
+    return tile_info
+
+
 def compute_tile_info(
-    tile_grid_coords: NDArray[np.int_],
+    tile_grid_indices: NDArray[np.int_],
     data_shape: NDArray[np.int_],
     tile_size: NDArray[np.int_],
     overlaps: NDArray[np.int_],
     sample_id: int = 0,
 ) -> TileInformation:
     """
-    Compute the tile information for a tile with the coordinates `tile_grid_coords`.
+    Compute the tile information for a tile with the coordinates `tile_grid_indices`.
 
     Parameters
     ----------
-    tile_grid_coords : 1D np.array of int
+    tile_grid_indices : 1D np.array of int
         The coordinates of the tile within the tile grid, ((Z), Y, X), i.e. for 2D
         tiling the coordinates for the second tile in the first row of tiles would be
         (0, 1).
@@ -127,7 +209,7 @@ def compute_tile_info(
 
     # The extent of the tile which will make up part of the stitched image.
     stitch_size = tile_size - overlaps
-    stitch_coords_start = tile_grid_coords * stitch_size
+    stitch_coords_start = tile_grid_indices * stitch_size
     stitch_coords_end = stitch_coords_start + stitch_size
 
     tile_coords_start = stitch_coords_start - overlaps // 2
@@ -155,7 +237,7 @@ def compute_tile_info(
 
     # --- Check if last tile
     tile_grid_shape = np.array(compute_tile_grid_shape(data_shape, tile_size, overlaps))
-    last_tile = (tile_grid_coords == (tile_grid_shape - 1)).all()
+    last_tile = (tile_grid_indices == (tile_grid_shape - 1)).all()
 
     tile_info = TileInformation(
         array_shape=data_shape,

@@ -34,9 +34,46 @@ def test_xy_rotate(ordered_array, shape):
     # check rotations
     for _ in range(5):
         r.random()  # consume random number
-        augmented, _ = aug(array)
+        augmented, *_ = aug(array)
 
         assert np.array_equal(augmented, rots[r.integers(1, 4) - 1])
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        # 2D
+        (1, 2, 2),
+        (2, 2, 2),
+        # 3D
+        (1, 2, 2, 2),
+        (2, 2, 2, 2),
+    ],
+)
+def test_additional_arrays_xy_rotate(ordered_array, shape):
+    """Test rotation for 2D and 3D arrays with a fixed seed."""
+    # create array
+    array: np.ndarray = ordered_array(shape)
+    additional_arrays = {"arr": ordered_array(shape)}
+
+    # create augmentation
+    aug = XYRandomRotate90(p=1, seed=42)
+    r = np.random.default_rng(seed=42)
+
+    axes = (2, 3) if len(array.shape) == 4 else (1, 2)
+    rots = [
+        np.rot90(array, k=1, axes=axes),
+        np.rot90(array, k=2, axes=axes),
+        np.rot90(array, k=3, axes=axes),
+    ]
+
+    # check rotations
+    for _ in range(5):
+        r.random()  # consume random number
+        augmented, _, additional_augmented = aug(array, **additional_arrays)
+
+        assert np.array_equal(augmented, rots[r.integers(1, 4) - 1])
+        assert np.array_equal(augmented, additional_augmented["arr"])
 
 
 def test_mask_rotate(ordered_array):
@@ -65,7 +102,7 @@ def test_mask_rotate(ordered_array):
     # apply augmentation 10 times
     for _ in range(5):
         r.random()  # consume random number
-        augmented_p, augmented_m = aug(array, mask)
+        augmented_p, augmented_m, _ = aug(array, mask)
         n_rot = r.integers(1, 4)
 
         assert np.array_equal(augmented_p, array_rots[n_rot - 1])
@@ -82,7 +119,7 @@ def test_p(ordered_array):
 
     # apply augmentation 5 times
     for _ in range(5):
-        augmented, _ = aug(array)
+        augmented, *_ = aug(array)
 
         assert np.array_equal(augmented, array)
 
@@ -91,6 +128,6 @@ def test_p(ordered_array):
 
     # apply augmentation 5 times
     for _ in range(5):
-        augmented, _ = aug(array)
+        augmented, *_ = aug(array)
 
         assert not np.array_equal(augmented, array)

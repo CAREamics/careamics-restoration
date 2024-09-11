@@ -141,7 +141,10 @@ filterwarnings = [
 ]
 addopts = "-p no:doctest"
 
-#markers = ["gpu: marks tests as requiring gpu"]
+markers = [
+    # "gpu: marks tests as requiring gpu",
+    "lvae: marks tests as testing lvae",
+]
 
 # https://coverage.readthedocs.io/en/6.4/config.html
 [tool.coverage.report]

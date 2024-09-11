@@ -12,6 +12,8 @@ from careamics.lvae_training.dataset.vae_data_config import (
 )
 from careamics.lvae_training.dataset.vae_dataset import MultiChDloader
 
+pytestmark = pytest.mark.lvae
+
 
 @pytest.fixture
 def dummy_data_path_biorc(tmp_path: Path) -> str:

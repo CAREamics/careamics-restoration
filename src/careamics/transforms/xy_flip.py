@@ -1,8 +1,9 @@
 """XY flip transform."""
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
+from numpy.typing import NDArray
 
 from careamics.transforms.transform import Transform
 
@@ -78,8 +79,11 @@ class XYFlip(Transform):
         self.rng = np.random.default_rng(seed=seed)
 
     def __call__(
-        self, patch: np.ndarray, target: Optional[np.ndarray] = None
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        self,
+        patch: NDArray,
+        target: Optional[NDArray] = None,
+        **additional_arrays: NDArray,
+    ) -> tuple[NDArray, Optional[NDArray], dict[str, NDArray]]:
         """Apply the transform to the source patch and the target (optional).
 
         Parameters
@@ -88,6 +92,9 @@ class XYFlip(Transform):
             Patch, 2D or 3D, shape C(Z)YX.
         target : Optional[np.ndarray], optional
             Target for the patch, by default None.
+        **additional_arrays : NDArray
+            Additional arrays that will be transformed identically to `patch` and
+            `target`.
 
         Returns
         -------
@@ -95,17 +102,20 @@ class XYFlip(Transform):
             Transformed patch and target.
         """
         if self.rng.random() > self.p:
-            return patch, target
+            return patch, target, additional_arrays
 
         # choose an axis to flip
         axis = self.rng.choice(self.axis_indices)
 
         patch_transformed = self._apply(patch, axis)
         target_transformed = self._apply(target, axis) if target is not None else None
+        additional_transformed = {
+            key: self._apply(array, axis) for key, array in additional_arrays.items()
+        }
 
-        return patch_transformed, target_transformed
+        return patch_transformed, target_transformed, additional_transformed
 
-    def _apply(self, patch: np.ndarray, axis: int) -> np.ndarray:
+    def _apply(self, patch: NDArray, axis: int) -> NDArray:
         """Apply the transform to the image.
 
         Parameters

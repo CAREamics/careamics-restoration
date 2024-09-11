@@ -795,11 +795,18 @@ class LadderVAE(nn.Module):
 
     #     return samples
 
-    # def reset_for_different_output_size(self, output_size):
-    #     for i in range(self.n_layers):
-    #         sz = output_size // 2**(1 + i)
-    #         self.bottom_up_layers[i].output_expected_shape = (sz, sz)
-    #         self.top_down_layers[i].latent_shape = (output_size, output_size)
+    def reset_for_different_output_size(self, output_size: int) -> None:
+        """Reset shape of output and latent tensors for different output size.
+
+        Used during evaluation to reset expected shapes of tensors when
+        input/output shape changes.
+        For instance, it is needed when the model was trained on, say, 64x64 sized
+        patches, but prediction is done on 128x128 patches.
+        """
+        for i in range(self.n_layers):
+            sz = output_size // 2 ** (1 + i)
+            self.bottom_up_layers[i].output_expected_shape = (sz, sz)
+            self.top_down_layers[i].latent_shape = (output_size, output_size)
 
     def pad_input(self, x):
         """

@@ -25,6 +25,8 @@ from careamics.models.lvae.noise_models import (
 )
 from careamics.utils.metrics import RunningPSNR
 
+pytestmark = pytest.mark.lvae
+
 
 # TODO: move to conftest.py as pytest.fixture
 def create_dummy_noise_model(
@@ -85,7 +87,6 @@ def create_split_lightning_model(
         nm_lik_config = None
 
     vae_config = VAEAlgorithmConfig(
-        algorithm_type="vae",
         algorithm=algorithm,
         loss=loss_type,
         model=lvae_config,
@@ -166,7 +167,6 @@ def test_musplit_lightining_init(
 
     with exp_error:
         vae_config = VAEAlgorithmConfig(
-            algorithm_type="vae",
             algorithm="musplit",
             loss=loss_type,
             model=lvae_config,
@@ -244,7 +244,6 @@ def test_denoisplit_lightining_init(
 
     with exp_error:
         vae_config = VAEAlgorithmConfig(
-            algorithm_type="vae",
             algorithm="denoisplit",
             loss=loss_type,
             model=lvae_config,

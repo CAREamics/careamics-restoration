@@ -14,13 +14,19 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch import nn
+from torch.utils.data import Dataset
 from matplotlib.gridspec import GridSpec
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from careamics.lightning import VAEModule
+from careamics.losses.lvae.losses import (
+    get_reconstruction_loss,
+    reconstruction_loss_musplit_denoisplit,
+)
 from careamics.models.lvae.utils import ModelType
-
-from .metrics import RangeInvariantPsnr, RunningPSNR
+from careamics.utils.metrics import scale_invariant_psnr, RunningPSNR
 
 
 # ------------------------------------------------------------------------------------------------
@@ -40,28 +46,26 @@ def clean_ax(ax):
     ax.tick_params(left=False, right=False, top=False, bottom=False)
 
 
-def get_plots_output_dir(
+def get_eval_output_dir(
     saveplotsdir: str, patch_size: int, mmse_count: int = 50
 ) -> str:
     """
     Given the path to a root directory to save plots, patch size, and mmse count,
     it returns the specific directory to save the plots.
     """
-    plotsrootdir = os.path.join(
-        saveplotsdir, f"plots/patch_{patch_size}_mmse_{mmse_count}"
+    eval_out_dir = os.path.join(
+        saveplotsdir, f"eval_outputs/patch_{patch_size}_mmse_{mmse_count}"
     )
-    os.makedirs(plotsrootdir, exist_ok=True)
-    print(plotsrootdir)
-    return plotsrootdir
+    os.makedirs(eval_out_dir, exist_ok=True)
+    print(eval_out_dir)
+    return eval_out_dir
 
 
 def get_psnr_str(tar_hsnr, pred, col_idx):
     """
     Compute PSNR between the ground truth (`tar_hsnr`) and the predicted image (`pred`).
     """
-    return (
-        f"{RangeInvariantPsnr(tar_hsnr[col_idx][None], pred[col_idx][None]).item():.1f}"
-    )
+    return f"{scale_invariant_psnr(tar_hsnr[col_idx][None], pred[col_idx][None]).item():.1f}"
 
 
 def add_psnr_str(ax_, psnr):
@@ -499,20 +503,40 @@ def get_predictions(idx, val_dset, model, mmse_count=50, patch_size=256):
 
 
 def get_dset_predictions(
-    model,
-    dset,
+    model: VAEModule,
+    dset: Dataset,
     batch_size: int,
-    model_type: ModelType = None,
+    loss_type: Literal["musplit", "denoisplit", "denoisplit_musplit"],
     mmse_count: int = 1,
     num_workers: int = 4,
-):
-    """
-    Get predictions from a model for the entire dataset.
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[float]]:
+    """Get patch-wise predictions from a model for the entire dataset.
 
     Parameters
     ----------
-    mmse_count : int
-        Number of samples to generate for each input and then to average over for MMSE estimation.
+    model : VAEModule
+        Lightning model used for prediction.
+    dset : Dataset
+        Dataset to predict on.
+    batch_size : int
+        Batch size to use for prediction.
+    loss_type :
+        Type of reconstruction loss used by the model, by default `None`.
+    mmse_count : int, optional
+        Number of samples to generate for each input and then to average over for
+        MMSE estimation, by default 1.
+    num_workers : int, optional
+        Number of workers to use for DataLoader, by default 4.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[float]]
+        Tuple containing:
+            - predictions: Predicted images for the dataset.
+            - predictions_std: Standard deviation of the predicted images.
+            - logvar_arr: Log variance of the predicted images.
+            - losses: Reconstruction losses for the predictions.
+            - psnr: PSNR values for the predictions.
     """
     dloader = DataLoader(
         dset,
@@ -521,69 +545,90 @@ def get_dset_predictions(
         shuffle=False,
         batch_size=batch_size,
     )
-    likelihood = model.model.likelihood
+
+    gauss_likelihood = model.gaussian_likelihood
+    nm_likelihood = model.noise_model_likelihood
+
     predictions = []
     predictions_std = []
     losses = []
     logvar_arr = []
-    patch_psnr_channels = [RunningPSNR() for _ in range(dset[0][1].shape[0])]
+    num_channels = dset[0][1].shape[0]
+    patch_psnr_channels = [RunningPSNR() for _ in range(num_channels)]
     with torch.no_grad():
-        for batch in tqdm(dloader):
-            inp, tar = batch[:2]
+        for batch in tqdm(dloader, desc="Predicting patches"):
+            inp, tar = batch
             inp = inp.cuda()
             tar = tar.cuda()
 
-            recon_img_list = []
+            rec_img_list = []
             for mmse_idx in range(mmse_count):
-                if model_type == ModelType.Denoiser:
-                    assert model.denoise_channel in [
-                        "Ch1",
-                        "Ch2",
-                        "input",
-                    ], '"all" denoise channel not supported for evaluation. Pick one of "Ch1", "Ch2", "input"'
 
-                    x_normalized_new, tar_new = model.get_new_input_target(
-                        (inp, tar, *batch[2:])
-                    )
-                    tar_normalized = model.normalize_target(tar_new)
-                    recon_normalized, _ = model(x_normalized_new)
-                    rec_loss, imgs = model.get_reconstruction_loss(
-                        recon_normalized,
-                        tar_normalized,
-                        x_normalized_new,
-                        return_predicted_img=True,
-                    )
+                # TODO: case of HDN left for future refactoring
+                # if model_type == ModelType.Denoiser:
+                #     assert model.denoise_channel in [
+                #         "Ch1",
+                #         "Ch2",
+                #         "input",
+                #     ], '"all" denoise channel not supported for evaluation. Pick one of "Ch1", "Ch2", "input"'
+
+                #     x_normalized_new, tar_new = model.get_new_input_target(
+                #         (inp, tar, *batch[2:])
+                #     )
+                #     rec, _ = model(x_normalized_new)
+                #     rec_loss, imgs = model.get_reconstruction_loss(
+                #         rec,
+                #         tar,
+                #         x_normalized_new,
+                #         return_predicted_img=True,
+                #     )
+
+                # get model output
+                rec, _ = model(inp)
+
+                # get reconstructed img
+                if model.model.predict_logvar is None:
+                    rec_img = rec
+                    logvar = torch.tensor([-1])
                 else:
-                    x_normalized = model.normalize_input(inp)
-                    tar_normalized = model.normalize_target(tar)
-                    recon_normalized, _ = model(x_normalized)
-                    rec_loss, imgs = model.get_reconstruction_loss(
-                        recon_normalized, tar_normalized, inp, return_predicted_img=True
-                    )
+                    rec_img, logvar = torch.chunk(rec, chunks=2, dim=1)
+                rec_img_list.append(rec_img.cpu().unsqueeze(0))  # add MMSE dim
+                logvar_arr.append(logvar.cpu().numpy())
 
+                # compute reconstruction loss
+                if loss_type == "musplit":
+                    rec_loss = get_reconstruction_loss(
+                        reconstruction=rec, target=tar, likelihood_obj=gauss_likelihood
+                    )
+                elif loss_type == "denoisplit":
+                    rec_loss = get_reconstruction_loss(
+                        reconstruction=rec, target=tar, likelihood_obj=nm_likelihood
+                    )
+                elif loss_type == "denoisplit_musplit":
+                    rec_loss = reconstruction_loss_musplit_denoisplit(
+                        predictions=rec,
+                        targets=tar,
+                        gaussian_likelihood=gauss_likelihood,
+                        nm_likelihood=nm_likelihood,
+                        nm_weight=model.loss_parameters.denoisplit_weight,
+                        gaussian_weight=model.loss_parameters.musplit_weight,
+                    )
+                    rec_loss = {"loss": rec_loss}  # hacky, but ok for now
+
+                # store rec loss values for first pred
                 if mmse_idx == 0:
-                    q_dic = (
-                        likelihood.distr_params(recon_normalized)
-                        if likelihood is not None
-                        else {"logvar": None}
-                    )
-                    if q_dic["logvar"] is not None:
-                        logvar_arr.append(q_dic["logvar"].cpu().numpy())
-                    else:
-                        logvar_arr.append(np.array([-1]))
-
                     try:
                         losses.append(rec_loss["loss"].cpu().numpy())
                     except:
                         losses.append(rec_loss["loss"])
 
-                for i in range(imgs.shape[1]):
-                    patch_psnr_channels[i].update(imgs[:, i], tar_normalized[:, i])
+                # update running PSNR
+                for i in range(num_channels):
+                    patch_psnr_channels[i].update(rec_img[:, i], tar[:, i])
 
-                recon_img_list.append(imgs.cpu()[None])
-
-            samples = torch.cat(recon_img_list, dim=0)
-            mmse_imgs = torch.mean(samples, dim=0)
+            # aggregate results
+            samples = torch.cat(rec_img_list, dim=0)
+            mmse_imgs = torch.mean(samples, dim=0)  # avg over MMSE dim
             mmse_std = torch.std(samples, dim=0)
             predictions.append(mmse_imgs.cpu().numpy())
             predictions_std.append(mmse_std.cpu().numpy())
@@ -591,10 +636,10 @@ def get_dset_predictions(
     psnr = [x.get() for x in patch_psnr_channels]
     return (
         np.concatenate(predictions, axis=0),
-        np.array(losses),
-        np.concatenate(logvar_arr),
-        psnr,
         np.concatenate(predictions_std, axis=0),
+        np.concatenate(logvar_arr),
+        np.array(losses),
+        psnr,
     )
 
 

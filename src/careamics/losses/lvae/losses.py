@@ -137,8 +137,8 @@ def reconstruction_loss_musplit_denoisplit(
     recons_loss : torch.Tensor
         The reconstruction loss. Shape is (1, ).
     """
-    # TODO: is this safe to check for predict_logvar value?
-    # otherwise use `gaussian_likelihood.predict_logvar` (or both)
+    # TODO: refactor this function to make it closer to `get_reconstruction_loss`
+    # (or viceversa)
     if predictions.shape[1] == 2 * targets.shape[1]:
         # predictions contain both mean and log-variance
         out_mean, _ = predictions.chunk(2, dim=1)
