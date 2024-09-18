@@ -3,9 +3,14 @@
 from typing import Any, Optional
 
 import torch
+from numpy.typing import NDArray
+from torch.utils.data import DataLoader
 
+from careamics.dataset.tiling.lvae_tiled_patching import compute_tile_info_legacy
+from careamics.lvae_training.dataset.vae_dataset import MultiChDloader
 from careamics.models.lvae import LadderVAE as LVAE
 from careamics.models.lvae.likelihoods import LikelihoodModule
+from careamics.prediction_utils import convert_outputs
 
 # TODO: convert these functions to lightning module `predict_step`
 #   -> mmse_count will have to be an instance attribute?
@@ -56,8 +61,8 @@ def lvae_predict_single_sample(
 def lvae_predict_tiled_batch(
     model: LVAE,
     likelihood_obj: LikelihoodModule,
-    input: tuple[Any],
-) -> tuple[tuple[Any], Optional[tuple[Any]]]:
+    input: tuple[Any, ...],
+) -> tuple[tuple[Any, ...], Optional[tuple[Any, ...]]]:
     # TODO: fix docstring return types, ... too many output options
     """
     Generate a single sample prediction from an LVAE model, for a given input.
@@ -96,9 +101,9 @@ def lvae_predict_tiled_batch(
 def lvae_predict_mmse_tiled_batch(
     model: LVAE,
     likelihood_obj: LikelihoodModule,
-    input: tuple[Any],
+    input: tuple[Any, ...],
     mmse_count: int,
-) -> tuple[tuple[Any], tuple[Any], Optional[tuple[Any]]]:
+) -> tuple[tuple[Any, ...], tuple[Any], Optional[tuple[Any, ...]]]:
     # TODO: fix docstring return types, ... hard to make readable
     """
     Generate the MMSE (minimum mean squared error) prediction, for a given input.
@@ -156,3 +161,76 @@ def lvae_predict_mmse_tiled_batch(
 
     log_var_output = (log_var, *aux) if log_var is not None else None
     return (mmse_prediction, *aux), (mmse_prediction_std, *aux), log_var_output
+
+
+def lvae_predict_mmse_dataset(
+    model: LVAE,
+    likelihood_obj: LikelihoodModule,
+    dataset: MultiChDloader,
+    mmse_count: int,
+    batch_size: int,
+    num_workers: int,
+) -> tuple[list[NDArray], list[NDArray], list[NDArray]]:
+    """
+    Predict the MMSE result for a whole dataset.
+
+    Parameters
+    ----------
+    model : LVAE
+        Trained LVAE model.
+    likelihood_obj : LikelihoodModule
+        Instance of a likelihood class.
+    dataset : MultiChDloader
+        The dataset to predict on.
+    mmse_count : int
+        Number of samples to generate to calculate MMSE (minimum mean squared error).
+    batch_size : int
+        The batch size to predict with, passed to the PyTorch dataloader.
+    num_workers : int
+        The number of workers to predict with, passed to the PyTorch dataloader.
+
+    Returns
+    -------
+    tuple[list[NDArray], list[NDArray], list[NDArray]]
+        The stiched results. First list is the MMSE images, second list is the standard
+        deviations and third list is the log variance.
+    """
+    dataloader = DataLoader(
+        dataset,
+        pin_memory=False,
+        num_workers=num_workers,
+        shuffle=False,
+        batch_size=batch_size,
+    )
+
+    mmse_batches = []
+    mmse_std_batches = []
+    log_var_batches = []
+    for batch_idx, batch in enumerate(dataloader):
+        # TODO: move input to correct device, i.e. cuda if available
+        input_: torch.Tensor
+        input_, _ = batch[:2]
+
+        # create tile information (simulating CAREamics dataset output)
+        dataset_idx_start = (batch_idx // batch_size) + (batch_idx % batch_size)
+        dataset_idx_iter = range(dataset_idx_start, dataset_idx_start + input_.shape[0])
+        tile_infos = tuple(
+            compute_tile_info_legacy(dataset.idx_manager, idx)
+            for idx in dataset_idx_iter
+        )
+
+        # predict mmse
+        mmse_batch, mmse_std_batch, log_var_batch = lvae_predict_mmse_tiled_batch(
+            model, likelihood_obj, (input_, tile_infos), mmse_count
+        )
+        # keep results
+        mmse_batches.append(mmse_batch)
+        mmse_std_batches.append(mmse_std_batch)
+        log_var_batches.append(log_var_batch)
+
+    # stitch tiles
+    mmse_stitched_images = convert_outputs(mmse_batches, tiled=True)
+    mmse_std_stitched_images = convert_outputs(mmse_std_batches, tiled=True)
+    log_var_stitched_images = convert_outputs(log_var_batches, tiled=True)
+
+    return mmse_stitched_images, mmse_std_stitched_images, log_var_stitched_images
