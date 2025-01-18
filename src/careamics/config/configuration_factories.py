@@ -4,17 +4,20 @@ from typing import Any, Literal, Optional, Union
 
 from pydantic import TypeAdapter
 
-from careamics.config.algorithms import CAREAlgorithm, N2NAlgorithm, N2VAlgorithm
+from careamics.config.algorithms import (
+    CAREAlgorithm,
+    N2NAlgorithm,
+    N2VAlgorithm,
+    UNetBasedAlgorithm,
+)
 from careamics.config.architectures import UNetModel
 from careamics.config.care_configuration import CAREConfiguration
-from careamics.config.configuration import Configuration
-from careamics.config.data import DataConfig, N2VDataConfig
+from careamics.config.data import DataConfig, GeneralDataConfig, N2VDataConfig
 from careamics.config.n2n_configuration import N2NConfiguration
 from careamics.config.n2v_configuration import N2VConfiguration
 from careamics.config.support import (
     SupportedArchitecture,
     SupportedPixelManipulation,
-    SupportedTransform,
 )
 from careamics.config.training_model import TrainingConfig
 from careamics.config.transformations import (
@@ -182,9 +185,8 @@ def _create_unet_configuration(
     )
 
 
-def _create_configuration(
+def _prepare_configuration(
     algorithm: Literal["n2v", "care", "n2n"],
-    experiment_name: str,
     data_type: Literal["array", "tiff", "custom"],
     axes: str,
     patch_size: list[int],
@@ -199,7 +201,7 @@ def _create_configuration(
     use_n2v2: bool = False,
     model_params: Optional[dict] = None,
     dataloader_params: Optional[dict] = None,
-) -> Configuration:
+) -> tuple[UNetBasedAlgorithm, GeneralDataConfig, TrainingConfig]:
     """
     Create a configuration for training N2V, CARE or Noise2Noise.
 
@@ -207,8 +209,6 @@ def _create_configuration(
     ----------
     algorithm : {"n2v", "care", "n2n"}
         Algorithm to use.
-    experiment_name : str
-        Name of the experiment.
     data_type : {"array", "tiff", "custom"}
         Type of the data.
     axes : str
@@ -241,8 +241,8 @@ def _create_configuration(
 
     Returns
     -------
-    Configuration
-        Configuration for training N2V, CARE or Noise2Noise.
+    (UNetBasedAlgorithm, GeneralDataConfig, TrainingConfig)
+        Configurations for training N2V, CARE or Noise2Noise.
     """
     # model
     unet_model = _create_unet_configuration(
@@ -255,21 +255,25 @@ def _create_configuration(
     )
 
     # algorithm model
-    algorithm_config = {
-        "algorithm": algorithm,
-        "loss": loss,
-        "model": unet_model,
-    }
+    algorithm_config = algorithm_factory(
+        {
+            "algorithm": algorithm,
+            "loss": loss,
+            "model": unet_model,
+        }
+    )
 
     # data model
-    data = {
-        "data_type": data_type,
-        "axes": axes,
-        "patch_size": patch_size,
-        "batch_size": batch_size,
-        "transforms": augmentations,
-        "dataloader_params": dataloader_params,
-    }
+    data = data_factory(
+        {
+            "data_type": data_type,
+            "axes": axes,
+            "patch_size": patch_size,
+            "batch_size": batch_size,
+            "transforms": augmentations,
+            "dataloader_params": dataloader_params,
+        }
+    )
 
     # training model
     training = TrainingConfig(
@@ -278,21 +282,12 @@ def _create_configuration(
         logger=None if logger == "none" else logger,
     )
 
-    # create configuration
-    configuration = {
-        "experiment_name": experiment_name,
-        "algorithm_config": algorithm_config,
-        "data_config": data,
-        "training_config": training,
-    }
-
-    return configuration_factory(configuration)
+    return algorithm_config, data, training
 
 
 # TODO reconsider naming once we officially support LVAE approaches
 def _create_supervised_configuration(
     algorithm: Literal["care", "n2n"],
-    experiment_name: str,
     data_type: Literal["array", "tiff", "custom"],
     axes: str,
     patch_size: list[int],
@@ -306,7 +301,7 @@ def _create_supervised_configuration(
     logger: Literal["wandb", "tensorboard", "none"] = "none",
     model_params: Optional[dict] = None,
     dataloader_params: Optional[dict] = None,
-) -> Configuration:
+) -> tuple[UNetBasedAlgorithm, GeneralDataConfig, TrainingConfig]:
     """
     Create a configuration for training CARE or Noise2Noise.
 
@@ -314,8 +309,6 @@ def _create_supervised_configuration(
     ----------
     algorithm : Literal["care", "n2n"]
         Algorithm to use.
-    experiment_name : str
-        Name of the experiment.
     data_type : Literal["array", "tiff", "custom"]
         Type of the data.
     axes : str
@@ -347,8 +340,8 @@ def _create_supervised_configuration(
 
     Returns
     -------
-    Configuration
-        Configuration for training CARE or Noise2Noise.
+    (UNetBasedAlgorithm, GeneralDataConfig, TrainingConfig)
+        Configurations for training CARE or Noise2Noise.
 
     Raises
     ------
@@ -375,9 +368,8 @@ def _create_supervised_configuration(
     # augmentations
     spatial_transform_list = _list_spatial_augmentations(augmentations)
 
-    return _create_configuration(
+    return _prepare_configuration(
         algorithm=algorithm,
-        experiment_name=experiment_name,
         data_type=data_type,
         axes=axes,
         patch_size=patch_size,
@@ -409,7 +401,7 @@ def create_care_configuration(
     logger: Literal["wandb", "tensorboard", "none"] = "none",
     model_params: Optional[dict] = None,
     dataloader_params: Optional[dict] = None,
-) -> Configuration:
+) -> CAREConfiguration:
     """
     Create a configuration for training CARE.
 
@@ -466,7 +458,7 @@ def create_care_configuration(
 
     Returns
     -------
-    Configuration
+    CAREConfiguration
         Configuration for training CARE.
 
     Examples
@@ -536,9 +528,8 @@ def create_care_configuration(
     ...     n_channels_out=1 # if applicable
     ... )
     """
-    return _create_supervised_configuration(
+    algorithm_cfg, data_cfg, training_cfg = _create_supervised_configuration(
         algorithm="care",
-        experiment_name=experiment_name,
         data_type=data_type,
         axes=axes,
         patch_size=patch_size,
@@ -552,6 +543,12 @@ def create_care_configuration(
         logger=logger,
         model_params=model_params,
         dataloader_params=dataloader_params,
+    )
+    return CAREConfiguration(
+        experiment_name=experiment_name,
+        algorithm_config=algorithm_cfg,
+        data_config=data_cfg,
+        training_config=training_cfg,
     )
 
 
@@ -570,7 +567,7 @@ def create_n2n_configuration(
     logger: Literal["wandb", "tensorboard", "none"] = "none",
     model_params: Optional[dict] = None,
     dataloader_params: Optional[dict] = None,
-) -> Configuration:
+) -> N2NConfiguration:
     """
     Create a configuration for training Noise2Noise.
 
@@ -627,7 +624,7 @@ def create_n2n_configuration(
 
     Returns
     -------
-    Configuration
+    N2NConfiguration
         Configuration for training Noise2Noise.
 
     Examples
@@ -697,9 +694,8 @@ def create_n2n_configuration(
     ...     n_channels_out=1 # if applicable
     ... )
     """
-    return _create_supervised_configuration(
+    algorithm_cfg, data_cfg, training_cfg = _create_supervised_configuration(
         algorithm="n2n",
-        experiment_name=experiment_name,
         data_type=data_type,
         axes=axes,
         patch_size=patch_size,
@@ -713,6 +709,12 @@ def create_n2n_configuration(
         logger=logger,
         model_params=model_params,
         dataloader_params=dataloader_params,
+    )
+    return N2NConfiguration(
+        experiment_name=experiment_name,
+        algorithm_config=algorithm_cfg,
+        data_config=data_cfg,
+        training_config=training_cfg,
     )
 
 
@@ -734,7 +736,7 @@ def create_n2v_configuration(
     logger: Literal["wandb", "tensorboard", "none"] = "none",
     model_params: Optional[dict] = None,
     dataloader_params: Optional[dict] = None,
-) -> Configuration:
+) -> N2VConfiguration:
     """
     Create a configuration for training Noise2Void.
 
@@ -817,7 +819,7 @@ def create_n2v_configuration(
 
     Returns
     -------
-    Configuration
+    N2VConfiguration
         Configuration for training N2V.
 
     Examples
@@ -924,7 +926,6 @@ def create_n2v_configuration(
 
     # create the N2VManipulate transform using the supplied parameters
     n2v_transform = N2VManipulateModel(
-        name=SupportedTransform.N2V_MANIPULATE.value,
         strategy=(
             SupportedPixelManipulation.MEDIAN.value
             if use_n2v2
@@ -937,9 +938,8 @@ def create_n2v_configuration(
     )
     transform_list: list[N2V_TRANSFORMS_UNION] = spatial_transforms + [n2v_transform]
 
-    return _create_configuration(
+    algorithm_cfg, data_cfg, training_cfg = _prepare_configuration(
         algorithm="n2v",
-        experiment_name=experiment_name,
         data_type=data_type,
         axes=axes,
         patch_size=patch_size,
@@ -954,4 +954,10 @@ def create_n2v_configuration(
         logger=logger,
         model_params=model_params,
         dataloader_params=dataloader_params,
+    )
+    return N2VConfiguration(
+        experiment_name=experiment_name,
+        algorithm_config=algorithm_cfg,
+        data_config=data_cfg,
+        training_config=training_cfg,
     )

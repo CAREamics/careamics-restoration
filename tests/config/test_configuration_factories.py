@@ -14,10 +14,10 @@ from careamics.config import (
     create_n2v_configuration,
 )
 from careamics.config.configuration_factories import (
-    _create_configuration,
     _create_supervised_configuration,
     _create_unet_configuration,
     _list_spatial_augmentations,
+    _prepare_configuration,
     configuration_factory,
     data_factory,
 )
@@ -120,9 +120,8 @@ def test_list_aug_error_wrong_transform():
 
 def test_supervised_configuration_passing_transforms():
     """Test that transforms can be passed to the configuration."""
-    config = _create_supervised_configuration(
+    _, data_cfg, _ = _create_supervised_configuration(
         algorithm="n2n",
-        experiment_name="test",
         data_type="tiff",
         axes="YX",
         patch_size=[64, 64],
@@ -130,8 +129,8 @@ def test_supervised_configuration_passing_transforms():
         num_epochs=100,
         augmentations=[XYFlipModel()],
     )
-    assert len(config.data_config.transforms) == 1
-    assert config.data_config.transforms[0].name == SupportedTransform.XY_FLIP.value
+    assert len(data_cfg.transforms) == 1
+    assert data_cfg.transforms[0].name == SupportedTransform.XY_FLIP.value
 
 
 def test_model_creation():
@@ -173,7 +172,6 @@ def test_model_creation():
 def test_create_configuration():
     """Test that the methods correctly passes all parameters."""
     algorithm = "care"
-    experiment_name = "test"
     data_type = "tiff"
     axes = "CYX"
     patch_size = [128, 128]
@@ -193,9 +191,8 @@ def test_create_configuration():
     }
 
     # instantiate config
-    config = _create_configuration(
+    algorithm_cfg, data_cfg, train_cfg = _prepare_configuration(
         algorithm=algorithm,
-        experiment_name=experiment_name,
         data_type=data_type,
         axes=axes,
         patch_size=patch_size,
@@ -211,21 +208,20 @@ def test_create_configuration():
         dataloader_params=dataloader_params,
     )
 
-    assert config.algorithm_config.algorithm == algorithm
-    assert config.experiment_name == experiment_name
-    assert config.data_config.data_type == data_type
-    assert config.data_config.axes == axes
-    assert config.data_config.patch_size == patch_size
-    assert config.data_config.batch_size == batch_size
-    assert config.training_config.num_epochs == num_epochs
-    assert config.data_config.transforms == transform_list
-    assert config.algorithm_config.model.independent_channels == independent_channels
-    assert config.algorithm_config.loss == loss
-    assert config.algorithm_config.model.in_channels == n_channels_in
-    assert config.algorithm_config.model.num_classes == n_channels_out
-    assert config.training_config.logger == logger
-    assert config.algorithm_config.model.depth == model_params["depth"]
-    assert config.data_config.dataloader_params == dataloader_params
+    assert algorithm_cfg.algorithm == algorithm
+    assert algorithm_cfg.model.depth == model_params["depth"]
+    assert algorithm_cfg.model.independent_channels == independent_channels
+    assert algorithm_cfg.loss == loss
+    assert algorithm_cfg.model.in_channels == n_channels_in
+    assert algorithm_cfg.model.num_classes == n_channels_out
+    assert data_cfg.data_type == data_type
+    assert data_cfg.axes == axes
+    assert data_cfg.patch_size == patch_size
+    assert data_cfg.batch_size == batch_size
+    assert data_cfg.transforms == transform_list
+    assert data_cfg.dataloader_params == dataloader_params
+    assert train_cfg.logger == logger
+    assert train_cfg.num_epochs == num_epochs
 
 
 def test_supervised_configuration_error_with_channel_axes():
@@ -234,7 +230,6 @@ def test_supervised_configuration_error_with_channel_axes():
     with pytest.raises(ValueError):
         _create_supervised_configuration(
             algorithm="n2n",
-            experiment_name="test",
             data_type="tiff",
             axes="CYX",
             patch_size=[64, 64],
@@ -248,7 +243,6 @@ def test_supervised_configuration_singleton_channel():
     1."""
     _create_supervised_configuration(
         algorithm="n2n",
-        experiment_name="test",
         data_type="tiff",
         axes="CYX",
         patch_size=[64, 64],
@@ -262,7 +256,6 @@ def test_supervised_configuration_no_channel():
     """Test that no error is raised without channel and number of inputs."""
     _create_supervised_configuration(
         algorithm="n2n",
-        experiment_name="test",
         data_type="tiff",
         axes="YX",
         patch_size=[64, 64],
@@ -277,7 +270,6 @@ def test_supervised_configuration_error_without_channel_axes():
     with pytest.raises(ValueError):
         _create_supervised_configuration(
             algorithm="n2n",
-            experiment_name="test",
             data_type="tiff",
             axes="YX",
             patch_size=[64, 64],
@@ -292,7 +284,6 @@ def test_supervised_configuration_channels():
     are specified."""
     _create_supervised_configuration(
         algorithm="n2n",
-        experiment_name="test",
         data_type="tiff",
         axes="CYX",
         patch_size=[64, 64],

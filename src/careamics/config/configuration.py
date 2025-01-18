@@ -112,6 +112,7 @@ class Configuration(BaseModel):
     model_config = ConfigDict(
         validate_assignment=True,
         arbitrary_types_allowed=True,
+        # extra="forbid", # TODO
     )
 
     # version
