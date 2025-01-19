@@ -53,7 +53,7 @@ dependencies = [
     'pyyaml<=6.0.2,!=6.0.0',
     'typer>=0.12.3,<=0.15.1',
     'scikit-image<=0.25.0',
-    'zarr<3.0.0',
+    'zarr<4.0.0',
     'pillow<=11.1.0',
     'matplotlib<=3.10.0'
 ]
